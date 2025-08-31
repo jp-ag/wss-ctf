@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-    "flag"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -19,7 +19,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-    "github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
@@ -33,22 +33,25 @@ type Config struct {
 
 // Challenge represents the metadata for a single challenge (challenge.json).
 type Challenge struct {
-	Name string `json:"name"`
-	Flag string `json:"flag"`
-	Hint string `json:"hint"`
-	Port int    `json:"port"`
+	Name     string   `json:"name"`
+	Flag     string   `json:"flag"`
+	Hints    []string `json:"hints"`
+	Port     int      `json:"port"`
+	Preface  string   `json:"preface"`
+	Postface string   `json:"postface"`
 }
 
 func main() {
-    // Define and parse the --build command-line flag.
-    build := flag.Bool("build", false, "Force rebuild of all challenge images")
-    clean := flag.Bool("clean", false, "Remove all challenge images and containers")
-    flag.Parse()
+	// Define and parse the --build command-line flag.
+	build := flag.Bool("build", false, "Force rebuild of all challenge images")
+	clean := flag.Bool("clean", false, "Remove all challenge images and containers")
+	debug := flag.Bool("debug", false, "Show verbose output including Docker operations")
+	flag.Parse()
 
 	// Set up signal handler to catch Ctrl+C
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-	
+
 	// Launch goroutine to handle interrupt signals
 	go func() {
 		for range sigChan {
@@ -100,7 +103,7 @@ func main() {
 	for {
 		fmt.Println("\n=== CHALLENGE MENU ===")
 		fmt.Println("Pick your challenge:")
-		
+
 		// Display available challenges
 		for i, challengeDir := range config.Challenges {
 			// Load challenge metadata to get the name
@@ -119,32 +122,31 @@ func main() {
 		}
 		fmt.Println("\nType a number to select a challenge, or 'quit' to exit")
 		fmt.Print("Your choice > ")
-		
+
 		input, _ := reader.ReadString('\n')
 		input = strings.TrimSpace(input)
-		
+
 		if strings.EqualFold(input, "quit") || strings.EqualFold(input, "exit") {
 			fmt.Println("\nExiting challenge platform. Goodbye!")
 			return
 		}
-		
+
 		// Parse the user's choice
 		choice, err := strconv.Atoi(input)
 		if err != nil || choice < 1 || choice > len(config.Challenges) {
 			fmt.Println("Invalid choice. Please enter a number between 1 and", len(config.Challenges))
 			continue
 		}
-		
+
 		// Run the selected challenge
 		challengeDir := config.Challenges[choice-1]
-		fmt.Printf("\n--- Starting Challenge: %s ---\n", challengeDir)
-		runChallenge(ctx, cli, challengeDir, *build)
+		runChallenge(ctx, cli, challengeDir, *build, *debug)
 		// After challenge ends (success or quit), return to menu
 	}
 }
 
 // runChallenge handles the logic for a single challenge: build, run, interact, and cleanup.
-func runChallenge(ctx context.Context, cli *client.Client, dirName string, forceBuild bool) bool {
+func runChallenge(ctx context.Context, cli *client.Client, dirName string, forceBuild bool, debug bool) bool {
 	challengePath := filepath.Join("challenges", dirName)
 
 	// Load challenge metadata.
@@ -160,65 +162,96 @@ func runChallenge(ctx context.Context, cli *client.Client, dirName string, force
 		return true
 	}
 
-	fmt.Printf("Loading Challenge: %s\n", challenge.Name)
+	fmt.Printf("\n--- Starting Challenge: %s ---\n", challenge.Name)
 
 	// Define unique names for the image and container to avoid conflicts.
-    imageTag := "challenge-" + strings.ToLower(dirName) + ":latest"
+	imageTag := "challenge-" + strings.ToLower(dirName) + ":latest"
 	containerName := "challenge-container-" + strings.ToLower(dirName)
 
 	// Clean up any previous container with the same name.
-	cleanup(ctx, cli, containerName, "", false) // Don't remove image yet, just container
+	cleanup(ctx, cli, containerName, "", false, debug) // Don't remove image yet, just container
 
-    // Check if the image exists locally.
-    exists, err := imageExists(ctx, cli, imageTag)
-    if err != nil {
-        // If we can't check, it's better to try building
-        log.Printf("Warning: Could not check if image '%s' exists: %v. Attempting to build.", imageTag, err)
-    }
+	// Check if the image exists locally.
+	exists, err := imageExists(ctx, cli, imageTag)
+	if err != nil {
+		// If we can't check, it's better to try building
+		log.Printf("Warning: Could not check if image '%s' exists: %v. Attempting to build.", imageTag, err)
+	}
 
-    if forceBuild || !exists{
-        if forceBuild {
-            fmt.Print("Build forced by user with --build flag")
-        }
-        // Build the Docker image for the challenge.
-	    err = buildImage(ctx, cli, challengePath, imageTag)
-        if err != nil {
-	        log.Printf("Error: Failed to build Docker image for challenge %s. Details: %v", dirName, err)
-		    return false
-	    }
-    } else {
-        fmt.Printf("Using existing image '%s'. Use --build to force a rebuild.\n", imageTag)
-    }
-	
+	if forceBuild || !exists {
+		if forceBuild && debug {
+			fmt.Print("Build forced by user with --build flag")
+		}
+		// Build the Docker image for the challenge.
+		err = buildImage(ctx, cli, challengePath, imageTag, debug)
+		if err != nil {
+			log.Printf("Error: Failed to build Docker image for challenge %s. Details: %v", dirName, err)
+			return false
+		}
+	} else {
+		if debug {
+			fmt.Printf("Using existing image '%s'. Use --build to force a rebuild.\n", imageTag)
+		}
+	}
+
 	// Run the container from the newly built image.
-	_, err = runContainer(ctx, cli, imageTag, containerName, challenge.Port)
+	_, err = runContainer(ctx, cli, imageTag, containerName, challenge.Port, debug)
 	if err != nil {
 		log.Printf("Error: Failed to run Docker container for challenge %s. Details: %v", dirName, err)
-		cleanup(ctx, cli, containerName, imageTag, true) // Cleanup container and image on failure
+		cleanup(ctx, cli, containerName, imageTag, true, debug) // Cleanup container and image on failure
 		return false
 	}
 
 	fmt.Printf("\n✅ Challenge '%s' is now running!\n", challenge.Name)
 	fmt.Printf("   You can interact with it at: http://127.0.0.1:%d\n\n", challenge.Port)
 
+	// Display preface if available
+	if challenge.Preface != "" {
+		fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+		fmt.Println(challenge.Preface)
+		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	}
+
 	// Start the user interaction loop.
 	reader := bufio.NewReader(os.Stdin)
+	hintIndex := 0
 	for {
 		fmt.Print("Enter flag > ")
 		input, _ := reader.ReadString('\n')
 		input = strings.TrimSpace(input)
 
 		if strings.EqualFold(input, challenge.Flag) {
-			fmt.Println("\n✅ Correct! Well done. Shutting down the current challenge...")
-			cleanup(ctx, cli, containerName, imageTag, false)
+			fmt.Println("\n✅ Correct! Well done.")
+			fmt.Println("\nShutting down the current challenge...")
+
+			// Display postface if available
+			if challenge.Postface != "" {
+				fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+				fmt.Println(challenge.Postface)
+				fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+			}
+
+			cleanup(ctx, cli, containerName, imageTag, false, debug)
 			fmt.Println("\nPress Enter to return to the challenge menu...")
 			reader.ReadString('\n')
 			return true // Success
 		} else if strings.EqualFold(input, "hint") {
-			fmt.Printf("Hint: %s\n", challenge.Hint)
+			if len(challenge.Hints) == 0 {
+				fmt.Println("No hints available for this challenge.")
+			} else if hintIndex < len(challenge.Hints) {
+				fmt.Printf("Hint %d/%d: %s\n", hintIndex+1, len(challenge.Hints), challenge.Hints[hintIndex])
+				hintIndex++
+				if hintIndex < len(challenge.Hints) {
+					fmt.Printf("(Type 'hint' again for another hint)\n")
+				} else {
+					fmt.Println("(No more hints available)")
+				}
+			} else {
+				fmt.Println("No more hints available. You've seen all the hints.")
+			}
 		} else if strings.EqualFold(input, "menu") {
 			fmt.Println("\nReturning to challenge menu...")
-			cleanup(ctx, cli, containerName, imageTag, false)
+			cleanup(ctx, cli, containerName, imageTag, false, debug)
 			return true // Return to menu
 		} else {
 			fmt.Println("Incorrect flag. Try again. (Type 'hint' for a hint or 'menu' to return to menu)")
@@ -228,22 +261,24 @@ func runChallenge(ctx context.Context, cli *client.Client, dirName string, force
 
 // Checks if a Docker image with the given tag exists locally.
 func imageExists(ctx context.Context, cli *client.Client, imageTag string) (bool, error) {
-    // Use a filter to ask the daemon directly, which is more efficient
-    // than listing all images and searching locally.
-    filterArgs := filters.NewArgs()
-    filterArgs.Add("reference", imageTag)
+	// Use a filter to ask the daemon directly, which is more efficient
+	// than listing all images and searching locally.
+	filterArgs := filters.NewArgs()
+	filterArgs.Add("reference", imageTag)
 
-    images, err := cli.ImageList(ctx, image.ListOptions{Filters: filterArgs})
-    if err != nil {
-        return false, err
-    }
+	images, err := cli.ImageList(ctx, image.ListOptions{Filters: filterArgs})
+	if err != nil {
+		return false, err
+	}
 
-    return len(images) > 0, nil
-} 
+	return len(images) > 0, nil
+}
 
 // buildImage creates a Docker image from a Dockerfile in the given path.
-func buildImage(ctx context.Context, cli *client.Client, buildContextPath, tag string) error {
-	fmt.Printf("Building image '%s'...\n", tag)
+func buildImage(ctx context.Context, cli *client.Client, buildContextPath, tag string, debug bool) error {
+	if debug {
+		fmt.Printf("Building image '%s'...\n", tag)
+	}
 
 	// Create a tar archive of the build context directory.
 	// The Docker daemon requires the build context as a tar stream.
@@ -298,13 +333,17 @@ func buildImage(ctx context.Context, cli *client.Client, buildContextPath, tag s
 		return fmt.Errorf("failed to read build response: %w", err)
 	}
 
-	fmt.Printf("Image '%s' built successfully.\n", tag)
+	if debug {
+		fmt.Printf("Image '%s' built successfully.\n", tag)
+	}
 	return nil
 }
 
 // runContainer creates and starts a container from a given image.
-func runContainer(ctx context.Context, cli *client.Client, image, name string, hostPort int) (string, error) {
-	fmt.Printf("Starting container '%s' from image '%s'...\n", name, image)
+func runContainer(ctx context.Context, cli *client.Client, image, name string, hostPort int, debug bool) (string, error) {
+	if debug {
+		fmt.Printf("Starting container '%s' from image '%s'...\n", name, image)
+	}
 
 	// Configure port mapping.
 	portStr := strconv.Itoa(hostPort)
@@ -329,16 +368,20 @@ func runContainer(ctx context.Context, cli *client.Client, image, name string, h
 		return "", fmt.Errorf("failed to start container: %w", err)
 	}
 
-	fmt.Printf("Container started successfully (ID: %s).\n", resp.ID[:12])
+	if debug {
+		fmt.Printf("Container started successfully (ID: %s).\n", resp.ID[:12])
+	}
 	return resp.ID, nil
 }
 
 // cleanup stops and removes a container, and optionally the associated image.
-func cleanup(ctx context.Context, cli *client.Client, containerName, imageName string, removeImage bool) {
-	fmt.Printf("Cleaning up resources for %s...\n", containerName)
+func cleanup(ctx context.Context, cli *client.Client, containerName, imageName string, removeImage bool, debug bool) {
+	if debug {
+		fmt.Printf("Cleaning up resources for %s...\n", containerName)
+	}
 
 	// Stop the container with a timeout.
-	timeout := 10 // seconds
+	timeout := 3 // seconds
 	if err := cli.ContainerStop(ctx, containerName, container.StopOptions{Timeout: &timeout}); err != nil {
 		// Log the error but don't stop the cleanup process. It might already be stopped.
 		// fmt.Printf("Warning: Could not stop container %s (it may not be running): %v\n", containerName, err)
@@ -355,7 +398,9 @@ func cleanup(ctx context.Context, cli *client.Client, containerName, imageName s
 			// fmt.Printf("Warning: Could not remove image %s: %v\n", imageName, err)
 		}
 	}
-	fmt.Println("Cleanup complete.")
+	if debug {
+		fmt.Println("Cleanup complete.")
+	}
 }
 
 // cleanAll removes all challenge containers and images
@@ -377,16 +422,16 @@ func cleanAll(ctx context.Context, cli *client.Client) {
 	for _, challengeDir := range config.Challenges {
 		imageTag := "challenge-" + strings.ToLower(challengeDir) + ":latest"
 		containerName := "challenge-container-" + strings.ToLower(challengeDir)
-		
+
 		// Stop and remove container if it exists
-		timeout := 10
+		timeout := 3
 		if err := cli.ContainerStop(ctx, containerName, container.StopOptions{Timeout: &timeout}); err != nil {
 			// Container might not exist, continue
 		}
 		if err := cli.ContainerRemove(ctx, containerName, container.RemoveOptions{Force: true}); err != nil {
 			// Container might not exist, continue
 		}
-		
+
 		// Remove image
 		if _, err := cli.ImageRemove(ctx, imageTag, image.RemoveOptions{Force: true}); err != nil {
 			log.Printf("Note: Could not remove image %s (might not exist)\n", imageTag)
@@ -395,5 +440,3 @@ func cleanAll(ctx context.Context, cli *client.Client) {
 		}
 	}
 }
-
-

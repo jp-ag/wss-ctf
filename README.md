@@ -1,6 +1,6 @@
 # WSS CTF Challenge Platform
 
-A Docker-based Capture The Flag (CTF) challenge platform that manages and runs security challenges sequentially.
+A Docker-based Capture The Flag (CTF) challenge platform with an interactive menu system for selecting and running security challenges.
 
 ## Prerequisites
 
@@ -25,9 +25,9 @@ A Docker-based Capture The Flag (CTF) challenge platform that manages and runs s
 This will:
 - Connect to Docker daemon
 - Load challenges from `challenges/config.json`
-- Build Docker images for each challenge (if not already built)
-- Run challenges sequentially
-- Accept flag submissions and provide hints
+- Display an interactive menu to select challenges
+- Build Docker images as needed (if not already built)
+- Run selected challenges and accept flag submissions
 
 ### Command Line Flags
 
@@ -39,6 +39,11 @@ This will:
 - `--clean` - Remove all challenge containers and images
   ```bash
   ./start-challenges --clean
+  ```
+
+- `--debug` - Show verbose output including Docker operations
+  ```bash
+  ./start-challenges --debug
   ```
 
 ## Challenge Structure
@@ -70,16 +75,39 @@ Metadata for each challenge:
 {
   "name": "Challenge Name",
   "flag": "FLAG{example}",
-  "hint": "Helpful hint text",
-  "port": 8080
+  "hints": [
+    "First hint - basic guidance",
+    "Second hint - more specific",
+    "Final hint - very specific"
+  ],
+  "port": 8080,
+  "preface": "Optional introduction text shown before challenge starts",
+  "postface": "Optional congratulations text shown after completion"
 }
 ```
 
+**Fields:**
+- `name` - Display name of the challenge
+- `flag` - The correct flag to complete the challenge
+- `hints` - Array of progressive hints (optional)
+- `port` - Host port to map the challenge container to
+- `preface` - Text shown when starting the challenge (optional)
+- `postface` - Text shown after successful completion (optional)
+
 ## Challenge Interaction
 
+### Main Menu
+- **Select challenge**: Type a number (1, 2, etc.) to start a challenge
+- **Exit platform**: Type `quit` or `exit`
+
+### During Challenge
 - **Submit flag**: Type the flag and press Enter
-- **Get hint**: Type `hint`
-- **Quit challenge**: Type `quit` or `exit`
+- **Get hint**: Type `hint` (reveals hints progressively)
+- **Return to menu**: Type `menu`
+
+### Security Features
+- **Ctrl+C Protection**: Ctrl+C is disabled to prevent accidental termination
+- **Graceful cleanup**: All containers are properly stopped and cleaned up
 
 ## Docker Image Management
 
@@ -91,11 +119,12 @@ Metadata for each challenge:
 
 Each challenge directory must contain:
 1. `Dockerfile` - Instructions to build the challenge container
-2. `challenge.json` - Challenge metadata (name, flag, hint, port)
+2. `challenge.json` - Challenge metadata (name, flag, hints, port, etc.)
 3. Challenge application that runs on port 80 inside the container
 
 ## Notes
 
-- Challenges run sequentially - you must complete or quit current challenge to proceed
+- Challenges can be run in any order through the interactive menu
 - Each challenge container is mapped from internal port 80 to the specified host port
-- Containers and images are automatically cleaned up after completion
+- Containers are automatically cleaned up when returning to menu or completing challenges
+- Use `--debug` flag to see detailed Docker operations for troubleshooting
