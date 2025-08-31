@@ -95,19 +95,52 @@ func main() {
 		log.Fatalf("Error: Could not parse challenges/config.json. Details: %v", err)
 	}
 
-	// Loop through each challenge defined in the config.
-	for i, challengeDir := range config.Challenges {
-		fmt.Printf("\n--- Starting Challenge %d of %d ---\n", i+1, len(config.Challenges))
-		success := runChallenge(ctx, cli, challengeDir, *build)
-		if !success {
+	// Main menu loop
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Println("\n=== CHALLENGE MENU ===")
+		fmt.Println("Pick your challenge:")
+		
+		// Display available challenges
+		for i, challengeDir := range config.Challenges {
+			// Load challenge metadata to get the name
+			challengePath := filepath.Join("challenges", challengeDir)
+			challengeFile, err := os.ReadFile(filepath.Join(challengePath, "challenge.json"))
+			if err != nil {
+				fmt.Printf("%d. %s (Error loading metadata)\n", i+1, challengeDir)
+				continue
+			}
+			var challenge Challenge
+			if err := json.Unmarshal(challengeFile, &challenge); err != nil {
+				fmt.Printf("%d. %s (Error parsing metadata)\n", i+1, challengeDir)
+				continue
+			}
+			fmt.Printf("%d. %s\n", i+1, challenge.Name)
+		}
+		fmt.Println("\nType a number to select a challenge, or 'quit' to exit")
+		fmt.Print("Your choice > ")
+		
+		input, _ := reader.ReadString('\n')
+		input = strings.TrimSpace(input)
+		
+		if strings.EqualFold(input, "quit") || strings.EqualFold(input, "exit") {
 			fmt.Println("\nExiting challenge platform. Goodbye!")
 			return
 		}
+		
+		// Parse the user's choice
+		choice, err := strconv.Atoi(input)
+		if err != nil || choice < 1 || choice > len(config.Challenges) {
+			fmt.Println("Invalid choice. Please enter a number between 1 and", len(config.Challenges))
+			continue
+		}
+		
+		// Run the selected challenge
+		challengeDir := config.Challenges[choice-1]
+		fmt.Printf("\n--- Starting Challenge: %s ---\n", challengeDir)
+		runChallenge(ctx, cli, challengeDir, *build)
+		// After challenge ends (success or quit), return to menu
 	}
-
-	fmt.Println("\n#######################################################")
-	fmt.Println("## Congratulations! You have completed all challenges! ##")
-	fmt.Println("#########################################################")
 }
 
 // runChallenge handles the logic for a single challenge: build, run, interact, and cleanup.
@@ -176,17 +209,19 @@ func runChallenge(ctx context.Context, cli *client.Client, dirName string, force
 		input = strings.TrimSpace(input)
 
 		if strings.EqualFold(input, challenge.Flag) {
-			fmt.Println("\nCorrect! Well done. Shutting down the current challenge...")
+			fmt.Println("\n✅ Correct! Well done. Shutting down the current challenge...")
 			cleanup(ctx, cli, containerName, imageTag, false)
+			fmt.Println("\nPress Enter to return to the challenge menu...")
+			reader.ReadString('\n')
 			return true // Success
 		} else if strings.EqualFold(input, "hint") {
 			fmt.Printf("Hint: %s\n", challenge.Hint)
-		} else if strings.EqualFold(input, "quit") || strings.EqualFold(input, "exit") {
-			fmt.Println("\nQuitting challenge. Shutting down...")
+		} else if strings.EqualFold(input, "menu") {
+			fmt.Println("\nReturning to challenge menu...")
 			cleanup(ctx, cli, containerName, imageTag, false)
-			return false // User quit
+			return true // Return to menu
 		} else {
-			fmt.Println("Incorrect flag. Try again. (Type 'hint' for a hint or 'quit' to exit)")
+			fmt.Println("Incorrect flag. Try again. (Type 'hint' for a hint or 'menu' to return to menu)")
 		}
 	}
 }
