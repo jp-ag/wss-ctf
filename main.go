@@ -100,66 +100,80 @@ func main() {
 
 	// Main menu loop
 	reader := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Println("\n=== CHALLENGE MENU ===")
-		fmt.Println("Pick your challenge:")
+    currentIndex := -1 // -1means that the user will choose
 
-		// Display available challenges
-		for i, challengeDir := range config.Challenges {
-			// Load challenge metadata to get the name
-			challengePath := filepath.Join("challenges", challengeDir)
-			challengeFile, err := os.ReadFile(filepath.Join(challengePath, "challenge.json"))
-			if err != nil {
-				fmt.Printf("%d. %s (Error loading metadata)\n", i+1, challengeDir)
-				continue
-			}
-			var challenge Challenge
-			if err := json.Unmarshal(challengeFile, &challenge); err != nil {
-				fmt.Printf("%d. %s (Error parsing metadata)\n", i+1, challengeDir)
-				continue
-			}
-			fmt.Printf("%d. %s\n", i+1, challenge.Name)
-		}
-		fmt.Println("\nType a number to select a challenge, or 'quit' to exit")
-		fmt.Print("Your choice > ")
+    for {
+        if currentIndex == -1 {
+            fmt.Println("\n=== CHALLENGE MENU ===")
+            fmt.Println("Pick your challenge:")
 
-		input, _ := reader.ReadString('\n')
-		input = strings.TrimSpace(input)
+            // Display available challenges
+            for i, challengeDir := range config.Challenges {
+                challengePath := filepath.Join("challenges", challengeDir)
+                challengeFile, err := os.ReadFile(filepath.Join(challengePath, "challenge.json"))
+                if err != nil {
+                    fmt.Printf("%d. %s (Error loading metadata)\n", i+1, challengeDir)
+                    continue
+                }
+                var challenge Challenge
+                if err := json.Unmarshal(challengeFile, &challenge); err != nil {
+                    fmt.Printf("%d. %s (Error parsing metadata)\n", i+1, challengeDir)
+                    continue
+                }
+                fmt.Printf("%d. %s\n", i+1, challenge.Name)
+            }
+            fmt.Println("\nType a number to select a challenge, or 'quit' to exit")
+            fmt.Print("Your choice > ")
 
-		if strings.EqualFold(input, "quit") || strings.EqualFold(input, "exit") {
-			fmt.Println("\nExiting challenge platform. Goodbye!")
-			return
-		}
+            input, _ := reader.ReadString('\n')
+            input = strings.TrimSpace(input)
 
-		// Parse the user's choice
-		choice, err := strconv.Atoi(input)
-		if err != nil || choice < 1 || choice > len(config.Challenges) {
-			fmt.Println("Invalid choice. Please enter a number between 1 and", len(config.Challenges))
-			continue
-		}
+            if strings.EqualFold(input, "quit") || strings.EqualFold(input, "exit") {
+                fmt.Println("\nExiting challenge platform. Goodbye!")
+                return
+            }
 
-		// Run the selected challenge
-		challengeDir := config.Challenges[choice-1]
-		runChallenge(ctx, cli, challengeDir, *build, *debug)
-		// After challenge ends (success or quit), return to menu
-	}
+            choice, err := strconv.Atoi(input)
+            if err != nil || choice < 1 || choice > len(config.Challenges) {
+                fmt.Println("Invalid choice. Please enter a number between 1 and", len(config.Challenges))
+                continue
+            }
+            currentIndex = choice - 1
+        }
+
+        challengeDir := config.Challenges[currentIndex]
+        result := runChallenge(ctx, cli, challengeDir, *build, *debug)
+        if result == "next" {
+            // Go to the next challenge automatically
+            if currentIndex+1 < len(config.Challenges) {
+                fmt.Println("\nMoving on to the next challenge...")
+                currentIndex++
+                continue
+            } else {
+                fmt.Println("\nYou have completed all the challenges!")
+                currentIndex = -1 // Back to menu
+                continue
+            }
+        }
+        // Back to menu
+        currentIndex = -1
+    }
 }
 
 // runChallenge handles the logic for a single challenge: build, run, interact, and cleanup.
-func runChallenge(ctx context.Context, cli *client.Client, dirName string, forceBuild bool, debug bool) bool {
-	challengePath := filepath.Join("challenges", dirName)
+func runChallenge(ctx context.Context, cli *client.Client, dirName string, forceBuild bool, debug bool) string {	challengePath := filepath.Join("challenges", dirName)
 
 	// Load challenge metadata.
 	challengeFile, err := os.ReadFile(filepath.Join(challengePath, "challenge.json"))
 	if err != nil {
 		log.Printf("Error: Could not read challenge.json in %s. Skipping. Details: %v", challengePath, err)
-		return true // Return true to continue to the next challenge
+		return "menu" // Return true to continue to the next challenge
 	}
 
 	var challenge Challenge
 	if err := json.Unmarshal(challengeFile, &challenge); err != nil {
 		log.Printf("Error: Could not parse challenge.json in %s. Skipping. Details: %v", challengePath, err)
-		return true
+		return "menu"
 	}
 
 	fmt.Printf("\n--- Starting Challenge: %s ---\n", challenge.Name)
@@ -186,7 +200,7 @@ func runChallenge(ctx context.Context, cli *client.Client, dirName string, force
 		err = buildImage(ctx, cli, challengePath, imageTag, debug)
 		if err != nil {
 			log.Printf("Error: Failed to build Docker image for challenge %s. Details: %v", dirName, err)
-			return false
+			return "fail"
 		}
 	} else {
 		if debug {
@@ -199,7 +213,7 @@ func runChallenge(ctx context.Context, cli *client.Client, dirName string, force
 	if err != nil {
 		log.Printf("Error: Failed to run Docker container for challenge %s. Details: %v", dirName, err)
 		cleanup(ctx, cli, containerName, imageTag, true, debug) // Cleanup container and image on failure
-		return false
+		return "fail"
 	}
 
 	fmt.Printf("\n✅ Challenge '%s' is now running!\n", challenge.Name)
@@ -222,19 +236,23 @@ func runChallenge(ctx context.Context, cli *client.Client, dirName string, force
 
 		if strings.EqualFold(input, challenge.Flag) {
 			fmt.Println("\n✅ Correct! Well done.")
-			fmt.Println("\nShutting down the current challenge...")
+            fmt.Println("\nShutting down the current challenge...")
 
-			// Display postface if available
-			if challenge.Postface != "" {
-				fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-				fmt.Println(challenge.Postface)
-				fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-			}
+            // Display postface if available
+            if challenge.Postface != "" {
+                fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                fmt.Println(challenge.Postface)
+                fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            }
 
-			cleanup(ctx, cli, containerName, imageTag, false, debug)
-			fmt.Println("\nPress Enter to return to the challenge menu...")
-			reader.ReadString('\n')
-			return true // Success
+            cleanup(ctx, cli, containerName, imageTag, false, debug)
+            fmt.Println("\nType 'next' to go straight to the next challenge, or press Enter to return to the menu...")
+            inputNext, _ := reader.ReadString('\n')
+            inputNext = strings.TrimSpace(inputNext)
+            if strings.EqualFold(inputNext, "next") {
+                return "next" // Signals the menu to advance to the next challenge
+            }
+            return "menu" // Nack to menu
 		} else if strings.EqualFold(input, "hint") {
 			if len(challenge.Hints) == 0 {
 				fmt.Println("No hints available for this challenge.")
@@ -252,7 +270,7 @@ func runChallenge(ctx context.Context, cli *client.Client, dirName string, force
 		} else if strings.EqualFold(input, "menu") {
 			fmt.Println("\nReturning to challenge menu...")
 			cleanup(ctx, cli, containerName, imageTag, false, debug)
-			return true // Return to menu
+			return "menu" // Return to menu
 		} else {
 			fmt.Println("Incorrect flag. Try again. (Type 'hint' for a hint or 'menu' to return to menu)")
 		}
