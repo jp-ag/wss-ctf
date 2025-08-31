@@ -11,9 +11,11 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -43,6 +45,16 @@ func main() {
     clean := flag.Bool("clean", false, "Remove all challenge images and containers")
     flag.Parse()
 
+	// Set up signal handler to catch Ctrl+C
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	
+	// Launch goroutine to handle interrupt signals
+	go func() {
+		for range sigChan {
+			fmt.Println("\n⚠️  Ctrl+C disabled. Please type 'quit' or 'exit' to shut down properly.")
+		}
+	}()
 
 	// Create a new Docker client.
 	ctx := context.Background()
