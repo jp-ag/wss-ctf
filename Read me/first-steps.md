@@ -15,8 +15,8 @@ You are using **Linux** or running a Linux-like terminal.
 1. Open your **Linux** terminal.
 2. Clone this repository [Git clone](https://github.com/jp-ag/wss-ctf.git 'Git clone')
 3. Open the directory:
-```cd wss-ctf
-```
+   ```cd wss-ctf
+   ```
 4. Build the application:
    ```bash
    go build -o start-challenges .
