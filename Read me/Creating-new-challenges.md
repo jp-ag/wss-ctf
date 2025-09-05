@@ -5,7 +5,7 @@ To create a challenge, your challenge directory must contain:
 3. A challenge application that runs on *port 80* inside the container. Each challenge container is mapped from internal port 80 to the specified host port.
 
 ### Running Challenges
-Insert the action below to connect to **Docker daemon* and load the `challenges/config.json`.
+Insert the action below to connect to *Docker daemon* and load the `challenges/config.json`.
 ```bash
 ./start-challenges
 ```
@@ -32,7 +32,7 @@ wss-ctf/
 ```
 </details>
 
-### Create your challenge's metadata
+### Creating metadata
 <details>
 <summary>The <i>challenge.json</i> defines names, flags, and hints of your challenges. You can edit the metadata according to your needs and preferences.</summary>
 
@@ -61,11 +61,11 @@ wss-ctf/
 ```
 </details>
 
-### Assign a number to your challenge
+### Assigning a number 
 <details>
 <summary>The <i>config.json</i> assigns a number to your challenge. You can edit the metadata according to your needs and preferences.</summary>
 
-> [!IMPORTANT]  
+> **IMPORTANT**
 > The challenge name used here must be the same used in *challenge.json*.
 
 **Default *config.json***:
@@ -79,6 +79,7 @@ wss-ctf/
 ## Docker Image and Container Management
 <details>
 <summary>This section contains information related to the challenges containers and images.</summary>
+
 **Important information**
 - All images are cached after the first build for faster subsequent runs.
 - Containers are automatically cleaned up when returning to menu or completing challenges.
