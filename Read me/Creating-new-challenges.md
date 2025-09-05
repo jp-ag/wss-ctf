@@ -16,7 +16,8 @@ The platform comes with two template challenges by default. You can edit the tem
 
 ### Directory Layout
 <details>
-<summary>The layout shows how the challenges are structured and show to user. You can edit the layout according to your challenges.</summary>
+<summary>The layout defines the challenge structure and how it is shown to the user. You can edit the layout according to your challenges.</summary>
+
 **Default directory layout**
 ```
 wss-ctf/
@@ -30,8 +31,10 @@ wss-ctf/
         └── [challenge files]
 ```
 </details>
+
 ### Create your challenge's metadata
-The *challenge.json* defines names, flags, and hints of your challenges. You can edit the metadata according to your needs and preferences.
+<details>
+<summary>The *challenge.json* defines names, flags, and hints of your challenges. You can edit the metadata according to your needs and preferences.</summary>
 **List of fields:**
 - `name` - Defines the display name of the challenge.
 - `flag` - Defines the flag used to complete the challenge.
@@ -55,10 +58,11 @@ The *challenge.json* defines names, flags, and hints of your challenges. You can
   "postface": "Optional congratulations text shown after completion"
 }
 ```
-
+</details>
 
 ### Assign a number to your challenge
-The *config.json* assigns a number to your challenge. You can edit the metadata according to your needs and preferences.
+<details>
+<summary>The *config.json* assigns a number to your challenge. You can edit the metadata according to your needs and preferences.</summary>
 [!IMPORTANT]  
 > The challenge name used here must be the same used in *challenge.json*.
 
@@ -68,10 +72,11 @@ The *config.json* assigns a number to your challenge. You can edit the metadata 
   "challenges": ["01-first-chal", "02-second-chal"]
 }
 ```
-
+</details>
 
 ## Docker Image and Container Management
-This section contains information related to the challenges containers and images.
+<details>
+<summary>This section contains information related to the challenges containers and images.</summary>
 **Important information**
 - All images are cached after the first build for faster subsequent runs.
 - Containers are automatically cleaned up when returning to menu or completing challenges.
@@ -91,9 +96,15 @@ Use `--clean` to remove all challenge containers and images.
   ./start-challenges --clean
   ```
 
+</details>
+
 ### Troubleshooting
-Use `--debug` to show show a detailed output including Docker operations.
+<details>
+<summary>Learn how to generate a detailed output that includes Docker operations.</summary>
+
+Use `--debug` to show show a detailed output, including Docker operations.
 #### `--debug` 
   ```bash
   ./start-challenges --debug
   ```
+</details>
