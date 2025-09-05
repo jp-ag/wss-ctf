@@ -40,10 +40,10 @@ wss-ctf/
 **List of fields:**
 - `name` - Defines the display name of the challenge.
 - `flag` - Defines the flag used to complete the challenge.
-- `hints` - *Optional* Defines the array of progressive hints.
+- `hints` (*Optional*) - Defines the array of progressive hints. 
 - `port` - Defines the tost port to map the challenge containers port to.
-- `preface` - *Optional* Defines the text shown at start of a challenge.
-- `postface` - *Optional* Defines the text shown at the end of a challenge.
+- `preface` (*Optional*) - Defines the text shown at start of a challenge.
+- `postface` (*Optional*) - Defines the text shown at the end of a challenge.
 
 **Default *challenge.json***:
 ```json
@@ -78,13 +78,13 @@ wss-ctf/
 
 ## Docker Image and Container Management
 <details>
-<summary>This section contains information related to the challenges containers and images.</summary>
+<summary> Learn more about the challenges containers and images, and how to edit them.</summary>
 
 **Important information**
 - All images are cached after the first build for faster subsequent runs.
 - Containers are automatically cleaned up when returning to menu or completing challenges.
 ### Command line flags - Optional
-You can use the commands listed below to debug, and edit your images and containers.
+You can use the commands listed below to edit your images and containers.
 
 ####  `--build`
 
@@ -103,9 +103,9 @@ Use `--clean` to remove all challenge containers and images.
 
 ### Troubleshooting
 <details>
-<summary>Learn how to generate a detailed output that includes Docker operations.</summary>
+<summary>Learn how to generate a detailed output.</summary>
 
-Use `--debug` to show show a detailed output, including Docker operations.
+Use `--debug` to generate complete output, including **Docker** operations.
 #### `--debug` 
   ```bash
   ./start-challenges --debug
