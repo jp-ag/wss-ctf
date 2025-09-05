@@ -1,21 +1,22 @@
 ## Requirements for Challenge Creation
-To create a challenge, aach challenge directory must contain:
+To create a challenge, your challenge directory must contain:
 1. Instructions to build the challenge container in the `Dockerfile`.
 2. The challenge metadata added to the `challenge.json`. 
 3. A challenge application that runs on *port 80* inside the container. Each challenge container is mapped from internal port 80 to the specified host port.
 
 ### Running Challenges
-Insert the action below to connect to **Docker daemon* and load challenges  `challenges/config.json`.
+Insert the action below to connect to **Docker daemon* and load the `challenges/config.json`.
 ```bash
 ./start-challenges
 ```
-The **Main Menu** is displayed and you can now select a challenge. Challenges can be run in any order.
+**Result**: The **Main Menu** is displayed and you can now select a challenge. Challenges can be run in any order.
 
 ## Creating Challenges 
 The platform comes with two template challenges by default. You can edit the templates or create new challenges using the resources below.
 
 ### Directory Layout
-The layout shows how the challenges are structured and show to user. You can edit the layout according to your challenges 
+<details>
+<summary>The layout shows how the challenges are structured and show to user. You can edit the layout according to your challenges.</summary>
 **Default directory layout**
 ```
 wss-ctf/
@@ -28,7 +29,8 @@ wss-ctf/
         ├── Dockerfile
         └── [challenge files]
 ```
-### challenge.json
+</details>
+### Create your challenge's metadata
 The *challenge.json* defines names, flags, and hints of your challenges. You can edit the metadata according to your needs and preferences.
 **List of fields:**
 - `name` - Defines the display name of the challenge.
@@ -55,7 +57,7 @@ The *challenge.json* defines names, flags, and hints of your challenges. You can
 ```
 
 
-### config.json
+### Assign a number to your challenge
 The *config.json* assigns a number to your challenge. You can edit the metadata according to your needs and preferences.
 [!IMPORTANT]  
 > The challenge name used here must be the same used in *challenge.json*.
