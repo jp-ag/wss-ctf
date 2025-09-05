@@ -35,6 +35,7 @@ wss-ctf/
 ### Create your challenge's metadata
 <details>
 <summary>The <i>challenge.json</i> defines names, flags, and hints of your challenges. You can edit the metadata according to your needs and preferences.</summary>
+
 **List of fields:**
 - `name` - Defines the display name of the challenge.
 - `flag` - Defines the flag used to complete the challenge.
@@ -63,6 +64,7 @@ wss-ctf/
 ### Assign a number to your challenge
 <details>
 <summary>The <i>config.json</i> assigns a number to your challenge. You can edit the metadata according to your needs and preferences.</summary>
+
 [!IMPORTANT]  
 > The challenge name used here must be the same used in *challenge.json*.
 
