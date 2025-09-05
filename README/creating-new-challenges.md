@@ -66,8 +66,7 @@ wss-ctf/
 <details>
 <summary>The <i>config.json</i> assigns a number to your challenge. You can edit the metadata according to your needs and preferences.</summary>
 
-**IMPORTANT**
-> The challenge name used here must be the same used in *challenge.json*.
+> **Important:** Use the same challenge name as used in the `name` field inside the *challenge.json*.
 
 **Default *config.json***:
 ```json
