@@ -1,8 +1,9 @@
-## Requirements for Challenge Creation
+## Prerequisites
+1. You have followed the steps described in [First Steps (README\first-steps.md)]
 To create a challenge, your challenge directory must contain:
-1. Instructions to build the challenge container in the `Dockerfile`.
-2. The challenge metadata added to the `challenge.json`. 
-3. A challenge application that runs on *port 80* inside the container. Each challenge container is mapped from internal port 80 to the specified host port.
+2. Instructions to build the challenge container in the `Dockerfile`.
+3. The challenge metadata added to the `challenge.json`. 
+4. A challenge application that runs on *port 80* inside the container. Each challenge container is mapped from internal port 80 to the specified host port.
 
 ### Running Challenges
 Insert the action below to connect to *Docker daemon* and load the `challenges/config.json`.
@@ -14,7 +15,7 @@ Insert the action below to connect to *Docker daemon* and load the `challenges/c
 ## Creating Challenges 
 The platform comes with two template challenges by default. You can edit the templates or create new challenges using the resources below.
 
-### Directory Layout
+### Directory layout
 <details>
 <summary>The layout defines the challenge structure and how it is shown to the user. You can edit the layout according to your challenges.</summary>
 
@@ -32,7 +33,7 @@ wss-ctf/
 ```
 </details>
 
-### Creating metadata
+### Creating Metadata
 <details>
 <summary>The <i>challenge.json</i> defines names, flags, and hints of your challenges. You can edit the metadata according to your needs and preferences.</summary>
 
@@ -83,7 +84,7 @@ wss-ctf/
 **Important information**
 - All images are cached after the first build for faster subsequent runs.
 - Containers are automatically cleaned up when returning to menu or completing challenges.
-### Command Line Flags - Optional
+### Command line flags - Optional
 You can use the commands listed below to debug, and edit your images and containers.
 
 ####  `--build`

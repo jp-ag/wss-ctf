@@ -1,15 +1,16 @@
-# How to play
+# How To Play
 Use the commands listed below to play a challenge. 
 ### Main Menu
-- **To start a challenge**: Type the challenge's number listed on the menu to start.
-- **To exit the platform**: Type `quit` or `exit` to exit.
+- **To start a challenge**: Type the challenge's number and press **Enter** on your keyboard.
+- **To exit the platform**: Type `quit` or `exit` and press **Enter** on your keyboard.
 
-### During a Challenge
+### During the challenge
 - **To submit a flag**: Type the contents from the flag's *.txt* file and press Enter.
-- **To get a hint**: Type `hint` to reveal hints.
-- **To return to the Main Menu**: Type `menu`. Returning to **Main Menu** ends the challenge. 
+- **To get a hint**: Type `hint` and press **Enter** on your keyboard. Hints are progressive, different hints are shown everytime you perform this action.
+- **To return to the Main Menu**: Type `menu` and press **Enter** on your keyboard. 
+    **Important** Returning to the **Main Menu** ends the challenge. 
 
-### Security Features
+### Security features
 Security features are automatically activated to prevent issues.
 - **Ctrl+C Protection**: Ctrl+C is disabled to prevent accidental termination.
-- **Graceful cleanup**: All containers are properly stopped and cleaned up once you leave the challenge. 
+- **Graceful Cleanup**: All containers are properly stopped and cleaned up once you leave the challenge. 
