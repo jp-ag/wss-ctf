@@ -1,5 +1,5 @@
 ## Prerequisites
-1. You have followed the steps described in [First Steps (README\first-steps.md)]
+1. You have followed the steps described in [First Steps (README\first-steps.md)].
 To create a challenge, your challenge directory must contain:
 2. Instructions to build the challenge container in the `Dockerfile`.
 3. The challenge metadata added to the `challenge.json`. 
