@@ -1,9 +1,5 @@
 ## Prerequisites
 1. You have followed the steps described in [First Steps (README\first-steps.md)].
-- To create a challenge, your challenge directory must contain:
-2. Instructions to build the challenge container in the `Dockerfile`.
-3. The challenge metadata added to the `challenge.json`. 
-4. A challenge application that runs on *port 80* inside the container. Each challenge container is mapped from internal port 80 to the specified host port.
 
 ### Running Challenges
 Insert the action below to connect to *Docker daemon* and load the `challenges/config.json`.
