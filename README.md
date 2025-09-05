@@ -1,22 +1,29 @@
 # WSS CTF Challenge Platform
-
-A Docker-based Capture The Flag (CTF) challenge platform with an interactive menu system for selecting and running security challenges.
+Use the **WSS CTF Challenge Platform** to create Docker-based Capture The Flag (CTF) challenges using Linux. With this platform, you can create interactive menu systems for selecting and running cybersecurity challenges.
 
 ## Prerequisites
+You are using **Linux** or running a Linux-like terminal.
+### For building the application: 
+- You have installed  **Go** 1.19 or a higher version.
+### For running challenge containers
+- You have installed **Docker**. 
+- **Docker daemon** is active.
 
-- **Go** (1.19 or higher) - For building the application
-- **Docker** - For running challenge containers
-- Docker daemon must be running
 
 ## Installation
 
-1. Clone the repository
-2. Build the application:
+1. Open your **Linux** terminal.
+2. Clone this repository [Git clone](https://github.com/jp-ag/wss-ctf.git 'Git clone')
+3. Open the directory:
+```cd wss-ctf
+```
+4. Build the application:
    ```bash
    go build -o start-challenges .
    ```
 
-## Usage
+
+## Use
 
 ### Running Challenges
 ```bash
@@ -29,7 +36,7 @@ This will:
 - Build Docker images as needed (if not already built)
 - Run selected challenges and accept flag submissions
 
-### Command Line Flags
+### Command Line Flags - Optional
 
 - `--build` - Force rebuild of all challenge Docker images
   ```bash
@@ -46,9 +53,11 @@ This will:
   ./start-challenges --debug
   ```
 
-## Challenge Structure
+## Challenge Structure - Non optional 
+Já vem com dois desafios de template, você pode edita-los ou deleta-los
 
 ### Directory Layout
+The layout comes pre-configured as shown below. You can edit the layout according to your challenges.
 ```
 wss-ctf/
 ├── main.go
@@ -62,7 +71,8 @@ wss-ctf/
 ```
 
 ### config.json
-Defines the order of challenges:
+The *config.json* defines the order of your challenges. You can edit the order according to your challenges.
+Pre-configured
 ```json
 {
   "challenges": ["01-first-chal", "02-second-chal"]
@@ -70,7 +80,8 @@ Defines the order of challenges:
 ```
 
 ### challenge.json
-Metadata for each challenge:
+The *challenge.json* defines name, flags, and hints of your challenges. You can edit the metadata according to your challenges.
+Pre-configured metadata:
 ```json
 {
   "name": "Challenge Name",
@@ -87,31 +98,16 @@ Metadata for each challenge:
 ```
 
 **Fields:**
-- `name` - Display name of the challenge
-- `flag` - The correct flag to complete the challenge
-- `hints` - Array of progressive hints (optional)
-- `port` - Host port to map the challenge container to
-- `preface` - Text shown when starting the challenge (optional)
-- `postface` - Text shown after successful completion (optional)
-
-## Challenge Interaction
-
-### Main Menu
-- **Select challenge**: Type a number (1, 2, etc.) to start a challenge
-- **Exit platform**: Type `quit` or `exit`
-
-### During Challenge
-- **Submit flag**: Type the flag and press Enter
-- **Get hint**: Type `hint` (reveals hints progressively)
-- **Return to menu**: Type `menu`
-
-### Security Features
-- **Ctrl+C Protection**: Ctrl+C is disabled to prevent accidental termination
-- **Graceful cleanup**: All containers are properly stopped and cleaned up
+- `name` - Display name of the challenge.
+- `flag` - The correct flag to complete the challenge.
+- `hints` - *Optional* Array of progressive hints.
+- `port` - Host port to map the challenge containers port to.
+- `preface` - *Optional* Text shown when starting the challenge.
+- `postface` - *Optional* Text shown after successful completion.
 
 ## Docker Image Management
 
-- Images are cached after first build for faster subsequent runs
+- For faster subsequent runs, images are cached after first build.
 - Use `--build` flag to force rebuild when challenge files change
 - Use `--clean` flag to remove all challenge resources
 
@@ -128,3 +124,20 @@ Each challenge directory must contain:
 - Each challenge container is mapped from internal port 80 to the specified host port
 - Containers are automatically cleaned up when returning to menu or completing challenges
 - Use `--debug` flag to see detailed Docker operations for troubleshooting
+
+## How to play
+Use the commands listed below to play a challenge. 
+### Main Menu
+- **To start a challenge**: Type the challenge's number listed on the menu to start.
+- **To exit the platform**: Type `quit` or `exit` to exit.
+
+### During a Challenge
+- **To submit a flag**: Type the contents from the flag's *.txt* file and press Enter.
+- **To get a hint**: Type `hint` to reveal hints.
+- **To return to the Main Menu**: Type `menu`. Returning to **Main Menu** ends the challenge. 
+
+### Security Features
+Security features are automatically activated to prevent issues.
+- **Ctrl+C Protection**: Ctrl+C is disabled to prevent accidental termination.
+- **Graceful cleanup**: All containers are properly stopped and cleaned up once you leave the challenge. 
+

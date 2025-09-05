@@ -1,0 +1,97 @@
+## Requirements for Challenge Creation
+To create a challenge, aach challenge directory must contain:
+1. Instructions to build the challenge container in the `Dockerfile`.
+2. The challenge metadata added to the `challenge.json`. 
+3. A challenge application that runs on *port 80* inside the container. Each challenge container is mapped from internal port 80 to the specified host port.
+
+### Running Challenges
+Insert the action below to connect to **Docker daemon* and load challenges  `challenges/config.json`.
+```bash
+./start-challenges
+```
+The **Main Menu** is displayed and you can now select a challenge. Challenges can be run in any order.
+
+## Creating Challenges 
+The platform comes with two template challenges by default. You can edit the templates or create new challenges using the resources below.
+
+### Directory Layout
+The layout shows how the challenges are structured and show to user. You can edit the layout according to your challenges 
+**Default directory layout**
+```
+wss-ctf/
+├── main.go
+├── start-challenges (compiled binary)
+└── challenges/
+    ├── config.json
+    └── [challenge-directories]/
+        ├── challenge.json
+        ├── Dockerfile
+        └── [challenge files]
+```
+### challenge.json
+The *challenge.json* defines names, flags, and hints of your challenges. You can edit the metadata according to your needs and preferences.
+**List of fields:**
+- `name` - Defines the display name of the challenge.
+- `flag` - Defines the flag used to complete the challenge.
+- `hints` - *Optional* Defines the array of progressive hints.
+- `port` - Defines the tost port to map the challenge containers port to.
+- `preface` - *Optional* Defines the text shown at start of a challenge.
+- `postface` - *Optional* Defines the text shown at the end of a challenge.
+
+**Default *challenge.json***:
+```json
+{
+  "name": "Challenge Name",
+  "flag": "FLAG{example}",
+  "hints": [
+    "First hint - basic guidance",
+    "Second hint - more specific",
+    "Final hint - very specific"
+  ],
+  "port": 8080,
+  "preface": "Optional introduction text shown before challenge starts",
+  "postface": "Optional congratulations text shown after completion"
+}
+```
+
+
+### config.json
+The *config.json* assigns a number to your challenge. You can edit the metadata according to your needs and preferences.
+[!IMPORTANT]  
+> The challenge name used here must be the same used in *challenge.json*.
+
+**Default *config.json***:
+```json
+{
+  "challenges": ["01-first-chal", "02-second-chal"]
+}
+```
+
+
+## Docker Image and Container Management
+This section contains information related to the challenges containers and images.
+**Important information**
+- All images are cached after the first build for faster subsequent runs.
+- Containers are automatically cleaned up when returning to menu or completing challenges.
+### Command Line Flags - Optional
+You can use the commands listed below to debug, and edit your images and containers.
+
+####  `--build`
+
+Use `--build` force a rebuild of all **Docker** images.
+  ```bash
+  ./start-challenges --build
+  ```
+
+#### `--clean` 
+Use `--clean` to remove all challenge containers and images.
+  ```bash
+  ./start-challenges --clean
+  ```
+
+### Troubleshooting
+Use `--debug` to show show a detailed output including Docker operations.
+#### `--debug` 
+  ```bash
+  ./start-challenges --debug
+  ```
