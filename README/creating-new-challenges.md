@@ -2,7 +2,7 @@
 1. You have followed the steps described in [First Steps (README\first-steps.md)].
 
 ### Running Challenges
-Insert the action below to connect to *Docker daemon* and load the `challenges/config.json`.
+Run the command below to connect to *Docker daemon* and load the `challenges/config.json`.
 ```bash
 ./start-challenges
 ```
@@ -37,7 +37,7 @@ wss-ctf/
 - `name` - Defines the display name of the challenge.
 - `flag` - Defines the flag used to complete the challenge.
 - `hints` (*Optional*) - Defines the array of progressive hints. 
-- `port` - Defines the tost port to map the challenge containers port to.
+- `port` - Defines the host port to map the challenge containers port to.
 - `preface` (*Optional*) - Defines the text shown at start of a challenge.
 - `postface` (*Optional*) - Defines the text shown at the end of a challenge.
 
