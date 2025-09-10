@@ -1,4 +1,4 @@
-# WSS CTF Challenge Platform
+# WSS CTF Challenge Platform Installation Guide
 Use the **WSS CTF Challenge Platform** to create Docker-based Capture The Flag (CTF) challenges using Linux. The platform consists of interactive menu systems for selecting and running cybersecurity challenges.
 
 ## Prerequisites
