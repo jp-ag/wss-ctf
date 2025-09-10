@@ -1,3 +1,5 @@
+# Creating New Challenges
+Follow the steps below to create a Capture the Flag challenge in the **WSS CTF Challenge Platform**.
 ## Prerequisites
 1. You have followed the steps described in [First Steps (README\first-steps.md)].
 
