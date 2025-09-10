@@ -1,12 +1,14 @@
-# Creating New Challenges
-Follow the steps below to create a Capture the Flag challenge in the **WSS CTF Challenge Platform**.
+# Creating and Editing Challenges
+Follow the steps to create and edit a Capture the Flag challenge in the **WSS CTF Challenge Platform**.
 
-## Prerequisites
+## Overview
+The platform comes with two template challenges by default. You can edit the challenges or create your own. Each section below corresponds to different parts of a challenge infrastructure.
+
+## Before you start
+Before you start editing or creating a challenge, ensure you:
 1. You have followed the steps described in [First Steps (README\first-steps.md)].
 
 
-## Creating Challenges 
-The platform comes with two template challenges by default. Edit the templates and create new challenges using the resources below.
 
 ### Directory layout
 <details>
