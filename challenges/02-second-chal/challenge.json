@@ -6,7 +6,7 @@
     "The flag might be hidden in plain sight.",
     "Try viewing the page source or using developer tools."
   ],
-  "port": 80,
+  "port": 8080,
   "preface": "Welcome to the second challenge!\nLet's see if you can apply what you learned.\nSometimes the simplest solutions are the best.",
   "postface": "Excellent work on the second challenge!\nYou're building your skills nicely.\nKeep up the momentum!"
 }
