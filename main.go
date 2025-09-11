@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"os/exec"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -160,121 +161,228 @@ func main() {
     }
 }
 
-// runChallenge handles the logic for a single challenge: build, run, interact, and cleanup.
-func runChallenge(ctx context.Context, cli *client.Client, dirName string, forceBuild bool, debug bool) string {	challengePath := filepath.Join("challenges", dirName)
+func fileExists(filename string) bool {
+    info, err := os.Stat(filename)
+    if os.IsNotExist(err) {
+        return false
+    }
+    return !info.IsDir()
+}
 
-	// Load challenge metadata.
-	challengeFile, err := os.ReadFile(filepath.Join(challengePath, "challenge.json"))
-	if err != nil {
-		log.Printf("Error: Could not read challenge.json in %s. Skipping. Details: %v", challengePath, err)
-		return "menu" // Return true to continue to the next challenge
-	}
+// runChallenge acts as a router, detecting the challenge type and calling the appropriate handler.
+func runChallenge(ctx context.Context, cli *client.Client, dirName string, forceBuild bool, debug bool) string {
+    challengePath := filepath.Join("challenges", dirName)
+    composePath := filepath.Join(challengePath, "docker-compose.yml")
+    dockerfilePath := filepath.Join(challengePath, "Dockerfile")
 
-	var challenge Challenge
-	if err := json.Unmarshal(challengeFile, &challenge); err != nil {
-		log.Printf("Error: Could not parse challenge.json in %s. Skipping. Details: %v", challengePath, err)
-		return "menu"
-	}
+    if fileExists(composePath) {
+        // This is a Docker Compose-based challenge
+        return runComposeChallenge(challengePath, debug)
+    } else if fileExists(dockerfilePath) {
+        // This is a Dockerfile-based challenge
+        return runDockerfileChallenge(ctx, cli, dirName, forceBuild, debug)
+    } else {
+        log.Printf("Error: No Dockerfile or docker-compose.yml found for challenge '%s'", dirName)
+        fmt.Println("\nPress Enter to return to the menu...")
+        bufio.NewReader(os.Stdin).ReadString('\n')
+        return "menu"
+    }
+}
 
-	fmt.Printf("\n--- Starting Challenge: %s ---\n", challenge.Name)
+// runComposeChallenge handles challenges defined by a docker-compose.yml file.
+func runComposeChallenge(challengePath string, debug bool) string {
+    // Load challenge metadata, which is common for all challenge types
+    challengeFile, err := os.ReadFile(filepath.Join(challengePath, "challenge.json"))
+    if err != nil {
+        log.Printf("Error: Could not read challenge.json in %s. Details: %v", challengePath, err)
+        return "menu"
+    }
+    var challenge Challenge
+    if err := json.Unmarshal(challengeFile, &challenge); err != nil {
+        log.Printf("Error: Could not parse challenge.json in %s. Details: %v", challengePath, err)
+        return "menu"
+    }
 
-	// Define unique names for the image and container to avoid conflicts.
-	imageTag := "challenge-" + strings.ToLower(dirName) + ":latest"
-	containerName := "challenge-container-" + strings.ToLower(dirName)
+    fmt.Printf("\n--- Starting Challenge: %s ---\n", challenge.Name)
+    fmt.Println("Detected docker-compose.yml, starting environment...")
 
-	// Clean up any previous container with the same name.
-	cleanup(ctx, cli, containerName, "", false, debug) // Don't remove image yet, just container
+    // --- Docker Compose Logic ---
+    // We execute docker-compose as an external command
+    cmdUp := exec.Command("docker-compose", "up", "-d")
+    cmdUp.Dir = challengePath // Run the command in the challenge's directory
+    if debug {
+        cmdUp.Stdout = os.Stdout
+        cmdUp.Stderr = os.Stderr
+    }
+    if err := cmdUp.Run(); err != nil {
+        log.Printf("Error starting docker-compose for challenge '%s': %v", challenge.Name, err)
+        // Attempt to clean up even if startup failed
+        cmdDown := exec.Command("docker-compose", "down")
+        cmdDown.Dir = challengePath
+        cmdDown.Run()
+        return "menu"
+    }
+    // --- End Docker Compose Logic ---
 
-	// Check if the image exists locally.
-	exists, err := imageExists(ctx, cli, imageTag)
-	if err != nil {
-		// If we can't check, it's better to try building
-		log.Printf("Warning: Could not check if image '%s' exists: %v. Attempting to build.", imageTag, err)
-	}
+    fmt.Printf("\n✅ Challenge '%s' is now running!\n", challenge.Name)
+    fmt.Printf("   You can interact with it at: http://127.0.0.1:%d\n\n", challenge.Port)
 
-	if forceBuild || !exists {
-		if forceBuild && debug {
-			fmt.Print("Build forced by user with --build flag")
-		}
-		// Build the Docker image for the challenge.
-		err = buildImage(ctx, cli, challengePath, imageTag, debug)
-		if err != nil {
-			log.Printf("Error: Failed to build Docker image for challenge %s. Details: %v", dirName, err)
-			return "fail"
-		}
-	} else {
-		if debug {
-			fmt.Printf("Using existing image '%s'. Use --build to force a rebuild.\n", imageTag)
-		}
-	}
+    if challenge.Preface != "" {
+        fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        fmt.Println(challenge.Preface)
+        fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    }
 
-	// Run the container from the newly built image.
-	_, err = runContainer(ctx, cli, imageTag, containerName, challenge.Port, debug)
-	if err != nil {
-		log.Printf("Error: Failed to run Docker container for challenge %s. Details: %v", dirName, err)
-		cleanup(ctx, cli, containerName, imageTag, true, debug) // Cleanup container and image on failure
-		return "fail"
-	}
+    // The user interaction loop is the same for both types of challenges
+    reader := bufio.NewReader(os.Stdin)
+    hintIndex := 0
+    var finalResult string
+    
+    interactionLoop:
+    for {
+        fmt.Print("Enter flag > ")
+        input, _ := reader.ReadString('\n')
+        input = strings.TrimSpace(input)
 
-	fmt.Printf("\n✅ Challenge '%s' is now running!\n", challenge.Name)
-	fmt.Printf("   You can interact with it at: http://127.0.0.1:%d\n\n", challenge.Port)
-
-	// Display preface if available
-	if challenge.Preface != "" {
-		fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-		fmt.Println(challenge.Preface)
-		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	}
-
-	// Start the user interaction loop.
-	reader := bufio.NewReader(os.Stdin)
-	hintIndex := 0
-	for {
-		fmt.Print("Enter flag > ")
-		input, _ := reader.ReadString('\n')
-		input = strings.TrimSpace(input)
-
-		if strings.EqualFold(input, challenge.Flag) {
-			fmt.Println("\n✅ Correct! Well done.")
-            fmt.Println("\nShutting down the current challenge...")
-
-            // Display postface if available
+        switch strings.ToLower(input) {
+        case strings.ToLower(challenge.Flag):
+            fmt.Println("\n✅ Correct! Well done.")
             if challenge.Postface != "" {
                 fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
                 fmt.Println(challenge.Postface)
                 fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
             }
-
-            cleanup(ctx, cli, containerName, imageTag, false, debug)
             fmt.Println("\nType 'next' to go straight to the next challenge, or press Enter to return to the menu...")
             inputNext, _ := reader.ReadString('\n')
-            inputNext = strings.TrimSpace(inputNext)
-            if strings.EqualFold(inputNext, "next") {
-                return "next" // Signals the menu to advance to the next challenge
+            if strings.EqualFold(strings.TrimSpace(inputNext), "next") {
+                finalResult = "next"
+            } else {
+                finalResult = "menu"
             }
-            return "menu" // Nack to menu
-		} else if strings.EqualFold(input, "hint") {
-			if len(challenge.Hints) == 0 {
-				fmt.Println("No hints available for this challenge.")
-			} else if hintIndex < len(challenge.Hints) {
-				fmt.Printf("Hint %d/%d: %s\n", hintIndex+1, len(challenge.Hints), challenge.Hints[hintIndex])
-				hintIndex++
-				if hintIndex < len(challenge.Hints) {
-					fmt.Printf("(Type 'hint' again for another hint)\n")
-				} else {
-					fmt.Println("(No more hints available)")
-				}
-			} else {
-				fmt.Println("No more hints available. You've seen all the hints.")
-			}
-		} else if strings.EqualFold(input, "menu") {
-			fmt.Println("\nReturning to challenge menu...")
-			cleanup(ctx, cli, containerName, imageTag, false, debug)
-			return "menu" // Return to menu
-		} else {
-			fmt.Println("Incorrect flag. Try again. (Type 'hint' for a hint or 'menu' to return to menu)")
-		}
-	}
+            break interactionLoop
+        case "hint":
+             if len(challenge.Hints) == 0 {
+                fmt.Println("No hints available for this challenge.")
+            } else if hintIndex < len(challenge.Hints) {
+                fmt.Printf("Hint %d/%d: %s\n", hintIndex+1, len(challenge.Hints), challenge.Hints[hintIndex])
+                hintIndex++
+            } else {
+                fmt.Println("No more hints available.")
+            }
+        case "menu":
+            finalResult = "menu"
+            break interactionLoop
+        default:
+            fmt.Println("Incorrect flag. Try again. (Type 'hint' for a hint or 'menu' to return to menu)")
+        }
+    }
+
+    // Cleanup for Docker Compose
+    fmt.Println("\nShutting down the current challenge environment...")
+    cmdDown := exec.Command("docker-compose", "down")
+    cmdDown.Dir = challengePath
+    if err := cmdDown.Run(); err != nil {
+        log.Printf("Warning: could not run 'docker-compose down': %v", err)
+    }
+    
+    return finalResult
+}
+
+// runDockerfileChallenge handles challenges defined by a Dockerfile.
+func runDockerfileChallenge(ctx context.Context, cli *client.Client, dirName string, forceBuild bool, debug bool) string {
+    // This function contains the exact same logic as your original runChallenge function
+    challengePath := filepath.Join("challenges", dirName)
+    challengeFile, err := os.ReadFile(filepath.Join(challengePath, "challenge.json"))
+    if err != nil {
+        log.Printf("Error: Could not read challenge.json in %s. Skipping. Details: %v", challengePath, err)
+        return "menu"
+    }
+    var challenge Challenge
+    if err := json.Unmarshal(challengeFile, &challenge); err != nil {
+        log.Printf("Error: Could not parse challenge.json in %s. Skipping. Details: %v", challengePath, err)
+        return "menu"
+    }
+    fmt.Printf("\n--- Starting Challenge: %s ---\n", challenge.Name)
+    imageTag := "challenge-" + strings.ToLower(dirName) + ":latest"
+    containerName := "challenge-container-" + strings.ToLower(dirName)
+    cleanup(ctx, cli, containerName, "", false, debug)
+    exists, err := imageExists(ctx, cli, imageTag)
+    if err != nil {
+        log.Printf("Warning: Could not check if image '%s' exists: %v. Attempting to build.", imageTag, err)
+    }
+    if forceBuild || !exists {
+        if forceBuild && debug {
+            fmt.Print("Build forced by user with --build flag")
+        }
+        err = buildImage(ctx, cli, challengePath, imageTag, debug)
+        if err != nil {
+            log.Printf("Error: Failed to build Docker image for challenge %s. Details: %v", dirName, err)
+            return "fail"
+        }
+    } else {
+        if debug {
+            fmt.Printf("Using existing image '%s'. Use --build to force a rebuild.\n", imageTag)
+        }
+    }
+    _, err = runContainer(ctx, cli, imageTag, containerName, challenge.Port, debug)
+    if err != nil {
+        log.Printf("Error: Failed to run Docker container for challenge %s. Details: %v", dirName, err)
+        cleanup(ctx, cli, containerName, imageTag, true, debug)
+        return "fail"
+    }
+    fmt.Printf("\n✅ Challenge '%s' is now running!\n", challenge.Name)
+    fmt.Printf("   You can interact with it at: http://127.0.0.1:%d\n\n", challenge.Port)
+    if challenge.Preface != "" {
+        fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        fmt.Println(challenge.Preface)
+        fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    }
+    reader := bufio.NewReader(os.Stdin)
+    hintIndex := 0
+    var finalResult string
+    
+    interactionLoop:
+    for {
+        fmt.Print("Enter flag > ")
+        input, _ := reader.ReadString('\n')
+        input = strings.TrimSpace(input)
+
+        switch strings.ToLower(input) {
+        case strings.ToLower(challenge.Flag):
+            fmt.Println("\n✅ Correct! Well done.")
+            if challenge.Postface != "" {
+                fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                fmt.Println(challenge.Postface)
+                fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            }
+            fmt.Println("\nType 'next' to go straight to the next challenge, or press Enter to return to the menu...")
+            inputNext, _ := reader.ReadString('\n')
+            if strings.EqualFold(strings.TrimSpace(inputNext), "next") {
+                finalResult = "next"
+            } else {
+                finalResult = "menu"
+            }
+            break interactionLoop
+        case "hint":
+            if len(challenge.Hints) == 0 {
+                fmt.Println("No hints available for this challenge.")
+            } else if hintIndex < len(challenge.Hints) {
+                fmt.Printf("Hint %d/%d: %s\n", hintIndex+1, len(challenge.Hints), challenge.Hints[hintIndex])
+                hintIndex++
+            } else {
+                fmt.Println("No more hints available.")
+            }
+        case "menu":
+            finalResult = "menu"
+            break interactionLoop
+        default:
+            fmt.Println("Incorrect flag. Try again. (Type 'hint' for a hint or 'menu' to return to menu)")
+        }
+    }
+    
+    fmt.Println("\nShutting down the current challenge...")
+    cleanup(ctx, cli, containerName, imageTag, false, debug)
+    return finalResult
 }
 
 // Checks if a Docker image with the given tag exists locally.
