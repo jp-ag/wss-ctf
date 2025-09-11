@@ -1,5 +1,8 @@
-# How To Play
-Use the commands listed below to play a challenge. 
+# Playing a Capture the Flag Challenge
+Use the commands listed below to play a Capture the Flag challenge in the **WSS CTF Challenge Platform**.
+## Overview
+## Before you start
+
 ### Main Menu
 - **To start a challenge**: Type the challenge's number and press **Enter** on your keyboard.
 - **To exit the platform**: Type `quit` or `exit` and press **Enter** on your keyboard.
