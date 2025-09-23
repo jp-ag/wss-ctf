@@ -34,13 +34,14 @@ type Config struct {
 
 // Challenge represents the metadata for a single challenge (challenge.json).
 type Challenge struct {
-	Name     string   `json:"name"`
-	Flag     string   `json:"flag"`
-	Hints    []string `json:"hints"`
-	Port     int      `json:"port"`
-	Preface  string   `json:"preface"`
-	Postface string   `json:"postface"`
+    Name     string   `json:"name"`
+    Flag     string   `json:"flag"`
+    Hints    []string `json:"hints"`
+    Ports    []int    `json:"ports"` // Mude para Ports e tipo []int
+    Preface  string   `json:"preface"`
+    Postface string   `json:"postface"`
 }
+
 
 func main() {
 	// Define and parse the --build command-line flag.
@@ -208,7 +209,7 @@ func runComposeChallenge(challengePath string, debug bool) string {
 
     // --- Docker Compose Logic ---
     // We execute docker-compose as an external command
-    cmdUp := exec.Command("docker-compose", "up", "-d")
+    cmdUp := exec.Command("docker", "compose", "up", "-d")
     cmdUp.Dir = challengePath // Run the command in the challenge's directory
     if debug {
         cmdUp.Stdout = os.Stdout
@@ -217,7 +218,7 @@ func runComposeChallenge(challengePath string, debug bool) string {
     if err := cmdUp.Run(); err != nil {
         log.Printf("Error starting docker-compose for challenge '%s': %v", challenge.Name, err)
         // Attempt to clean up even if startup failed
-        cmdDown := exec.Command("docker-compose", "down")
+        cmdDown := exec.Command("docker", "compose", "down")
         cmdDown.Dir = challengePath
         cmdDown.Run()
         return "menu"
@@ -225,7 +226,18 @@ func runComposeChallenge(challengePath string, debug bool) string {
     // --- End Docker Compose Logic ---
 
     fmt.Printf("\n✅ Challenge '%s' is now running!\n", challenge.Name)
-    fmt.Printf("   You can interact with it at: http://127.0.0.1:%d\n\n", challenge.Port)
+    fmt.Println("   You can interact with it at:")
+    for _, port := range challenge.Ports {
+        // Adiciona uma descrição simples para as portas conhecidas
+        if port == 9001 {
+            fmt.Printf("   - Web Console: http://127.0.0.1:%d\n", port)
+        } else if port == 9000 {
+            fmt.Printf("   - API Endpoint: http://127.0.0.1:%d\n", port)
+        } else {
+            fmt.Printf("   - http://127.0.0.1:%d\n", port)
+        }
+    }
+    fmt.Println()
 
     if challenge.Preface != "" {
         fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -324,14 +336,28 @@ func runDockerfileChallenge(ctx context.Context, cli *client.Client, dirName str
             fmt.Printf("Using existing image '%s'. Use --build to force a rebuild.\n", imageTag)
         }
     }
-    _, err = runContainer(ctx, cli, imageTag, containerName, challenge.Port, debug)
+    if len(challenge.Ports) == 0 {
+    log.Printf("Error: No ports defined in challenge.json for '%s'", challenge.Name)
+    return "fail" 
+    }
+    _, err = runContainer(ctx, cli, imageTag, containerName, challenge.Ports[0], debug)
     if err != nil {
         log.Printf("Error: Failed to run Docker container for challenge %s. Details: %v", dirName, err)
         cleanup(ctx, cli, containerName, imageTag, true, debug)
         return "fail"
     }
     fmt.Printf("\n✅ Challenge '%s' is now running!\n", challenge.Name)
-    fmt.Printf("   You can interact with it at: http://127.0.0.1:%d\n\n", challenge.Port)
+    fmt.Println("   You can interact with it at:")
+    for _, port := range challenge.Ports {
+        // Adiciona uma descrição simples para as portas conhecidas
+        if port == 9001 {
+            fmt.Printf("   - Web Console: http://127.0.0.1:%d\n", port)
+        } else if port == 9000 {
+            fmt.Printf("   - API Endpoint: http://127.0.0.1:%d\n", port)
+        } else {
+            fmt.Printf("   - http://127.0.0.1:%d\n", port)
+        }
+    }    
     if challenge.Preface != "" {
         fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         fmt.Println(challenge.Preface)
