@@ -1,0 +1,12 @@
+{
+  "name": "Minio - Leaky Buckets",
+  "flag": "flag1234",
+  "hints": [
+    "The vulnerability is in a specific version of a popular object storage service. What's the CVE?",
+    "The vulnerability is related to the bootstrap process and discloses sensitive information from environment variables.",
+    "A Proof of Concept for CVE-2023-28432 can be found online. It involves a POST request to a specific API endpoint."
+  ],
+  "ports": [9000, 9001],
+  "preface": "We've set up an instance of the Minio object storage service for you.\nIt seems to be an older version, but the sysadmin swears it's secure.\nYour mission is to find the administrator's root password and submit it as the flag.",
+  "postface": "Excellent work! You leveraged a real-world vulnerability to extract sensitive information.\nThis shows why keeping software up-to-date is critical."
+}
