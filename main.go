@@ -90,9 +90,9 @@ func main() {
 	fmt.Println("Docker client connected successfully.")
 
 	// Load the main configuration file.
-	configFile, err := os.ReadFile("challenges/config.json")
+	configFile, err := os.ReadFile("/wss-ctf/challenges/config.json")
 	if err != nil {
-		log.Fatalf("Error: Could not read challenges/config.json. Details: %v", err)
+		log.Fatalf("Error: Could not read /wss-ctf/challenges/config.json. Details: %v", err)
 	}
 
 	var config Config
@@ -111,7 +111,7 @@ func main() {
 
             // Display available challenges
             for i, challengeDir := range config.Challenges {
-                challengePath := filepath.Join("challenges", challengeDir)
+                challengePath := filepath.Join("/wss-ctf/challenges", challengeDir)
                 challengeFile, err := os.ReadFile(filepath.Join(challengePath, "challenge.json"))
                 if err != nil {
                     fmt.Printf("%d. %s (Error loading metadata)\n", i+1, challengeDir)
@@ -172,7 +172,7 @@ func fileExists(filename string) bool {
 
 // runChallenge acts as a router, detecting the challenge type and calling the appropriate handler.
 func runChallenge(ctx context.Context, cli *client.Client, dirName string, forceBuild bool, debug bool) string {
-    challengePath := filepath.Join("challenges", dirName)
+    challengePath := filepath.Join("/wss-ctf/challenges", dirName)
     composePath := filepath.Join(challengePath, "docker-compose.yml")
     dockerfilePath := filepath.Join(challengePath, "Dockerfile")
 
@@ -303,7 +303,7 @@ func runComposeChallenge(challengePath string, debug bool) string {
 // runDockerfileChallenge handles challenges defined by a Dockerfile.
 func runDockerfileChallenge(ctx context.Context, cli *client.Client, dirName string, forceBuild bool, debug bool) string {
     // This function contains the exact same logic as your original runChallenge function
-    challengePath := filepath.Join("challenges", dirName)
+    challengePath := filepath.Join("/wss-ctf/challenges", dirName)
     challengeFile, err := os.ReadFile(filepath.Join(challengePath, "challenge.json"))
     if err != nil {
         log.Printf("Error: Could not read challenge.json in %s. Skipping. Details: %v", challengePath, err)
@@ -558,15 +558,15 @@ func cleanup(ctx context.Context, cli *client.Client, containerName, imageName s
 // cleanAll removes all challenge containers and images
 func cleanAll(ctx context.Context, cli *client.Client) {
 	// Load the configuration to get all challenge directories
-	configFile, err := os.ReadFile("challenges/config.json")
+	configFile, err := os.ReadFile("/wss-ctf/challenges/config.json")
 	if err != nil {
-		log.Printf("Warning: Could not read challenges/config.json: %v", err)
+		log.Printf("Warning: Could not read /wss-ctf/challenges/config.json: %v", err)
 		return
 	}
 
 	var config Config
 	if err := json.Unmarshal(configFile, &config); err != nil {
-		log.Printf("Warning: Could not parse challenges/config.json: %v", err)
+		log.Printf("Warning: Could not parse /wss-ctf/challenges/config.json: %v", err)
 		return
 	}
 
