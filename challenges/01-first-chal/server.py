@@ -28,6 +28,22 @@ def challenge():
         </body></html>
         """
 
+@app.route("/download", methods=["GET"])
+def download():
+    filename = flask.request.args.get("file", "")
+
+    if filename != "report.pdf":
+        return "No access to download this file", 403
+
+    # Create the report.pdf content
+    content = "hello world"
+
+    response = flask.Response(content)
+    response.headers['Content-Disposition'] = 'attachment; filename=report.pdf'
+    response.headers['Content-Type'] = 'text/plain'
+
+    return response
+
 app.secret_key = os.urandom(8)
 app.run(host="0.0.0.0", port=80)
 
