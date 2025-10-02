@@ -97,7 +97,7 @@ func main() {
 
 	var config Config
 	if err := json.Unmarshal(configFile, &config); err != nil {
-		log.Fatalf("Error: Could not parse challenges/config.json. Details: %v", err)
+		log.Fatalf("Error: Could not parse /wss-ctf/challenges/config.json. Details: %v", err)
 	}
 
 	// Main menu loop
