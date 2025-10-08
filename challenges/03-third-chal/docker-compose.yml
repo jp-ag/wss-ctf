@@ -7,7 +7,8 @@ services:
       - data1-2:/data2
     environment:
       - MINIO_ROOT_USER=minioadmin
-      - MINIO_ROOT_PASSWORD=flag1234
+      - MINIO_ROOT_PASSWORD=minioadmin-super-secret-password-do-not-use
+      - MINIO_UPDATE_MINISIGN_PUBKEY=
     command: server http://minio{1...4}/data{1...2} --console-address ":9001"
     expose:
       - "9000"
@@ -29,7 +30,8 @@ services:
       - data2-2:/data2
     environment:
       - MINIO_ROOT_USER=minioadmin
-      - MINIO_ROOT_PASSWORD=flag1234
+      - MINIO_ROOT_PASSWORD=minioadmin-super-secret-password-do-not-use
+      - MINIO_UPDATE_MINISIGN_PUBKEY=
     command: server http://minio{1...4}/data{1...2} --console-address ":9001"
     expose:
       - "9000"
@@ -48,7 +50,8 @@ services:
       - data3-2:/data2
     environment:
       - MINIO_ROOT_USER=minioadmin
-      - MINIO_ROOT_PASSWORD=flag1234
+      - MINIO_ROOT_PASSWORD=minioadmin-super-secret-password-do-not-use
+      - MINIO_UPDATE_MINISIGN_PUBKEY=
     command: server http://minio{1...4}/data{1...2} --console-address ":9001"
     expose:
       - "9000"
@@ -67,7 +70,8 @@ services:
       - data4-2:/data2
     environment:
       - MINIO_ROOT_USER=minioadmin
-      - MINIO_ROOT_PASSWORD=flag1234
+      - MINIO_ROOT_PASSWORD=minioadmin-super-secret-password-do-not-use
+      - MINIO_UPDATE_MINISIGN_PUBKEY=
     command: server http://minio{1...4}/data{1...2} --console-address ":9001"
     expose:
       - "9000"
