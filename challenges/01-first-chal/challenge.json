@@ -1,12 +1,12 @@
 {
   "name": "The First Step",
-  "flag": "1234",
+  "flag": "WSS{flag88214B93CB66C6AA015B8486E3E65CBA}",
   "hints": [
     "Sometimes the most obvious answer is the right one.",
     "Have you tried looking around the page?",
     "Check the page source or inspect element."
   ],
-  "port": 8080,
+  "ports": [8080],
   "preface": "Welcome to your first challenge!\nThis is a simple warm-up to get you familiar with the platform.\nRemember: flags often hide in plain sight.",
-  "postface": "Great job! You've completed the first challenge.\nYou're getting the hang of this!\nReady for something a bit harder?"
+  "postface": "Great job! You've found the first flag.\nBefore moving forward, make sure to download the important report at /download?file=report.pdf\nThe challenge container is still running for you to access it."
 }
