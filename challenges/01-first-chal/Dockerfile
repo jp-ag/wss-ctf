@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY server.py .
 
-RUN echo '1234' > /flag
+RUN echo 'WSS{flag88214B93CB66C6AA015B8486E3E65CBA}' > /flag
 
 RUN pip install flask
 

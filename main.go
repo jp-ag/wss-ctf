@@ -288,10 +288,10 @@ func runComposeChallenge(ctx context.Context, cli *client.Client, challengePath 
 
     // Cleanup for Docker Compose
     fmt.Println("\nShutting down the current challenge environment...")
-    cmdDown := exec.Command("docker-compose", "down")
+    cmdDown := exec.Command("docker", "compose", "down")
     cmdDown.Dir = challengePath
     if err := cmdDown.Run(); err != nil {
-        log.Printf("Warning: could not run 'docker-compose down': %v", err)
+        log.Printf("Warning: could not run 'docker compose down': %v", err)
     }
     
     return finalResult
