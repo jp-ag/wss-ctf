@@ -1,12 +1,16 @@
 {
-  "name": "The Second Step", 
-  "flag": "1234",
-  "hints": [
-    "This challenge is similar to the first one.",
-    "The flag might be hidden in plain sight.",
-    "Try viewing the page source or using developer tools."
+  "name": "Minio - Leaky Buckets",
+  "flags": [
+    "flag_from_report_pdf",
+    "flag_from_minio_image",
+    "flag_from_second_vuln"
   ],
-  "port": 8080,
-  "preface": "Welcome to the second challenge!\nLet's see if you can apply what you learned.\nSometimes the simplest solutions are the best.",
-  "postface": "Excellent work on the second challenge!\nYou're building your skills nicely.\nKeep up the momentum!"
+  "hints": [
+    "The vulnerability is in a specific version of a popular object storage service. What's the CVE?",
+    "The vulnerability is related to the bootstrap process and discloses sensitive information from environment variables.",
+    "A Proof of Concept for CVE-2023-28432 can be found online. It involves a POST request to a specific API endpoint."
+  ],
+  "ports": [9000, 9001],
+  "preface": "We've set up an instance of the Minio object storage service for you.\nIt seems to be an older version, but the sysadmin swears it's secure.\nYour mission is to find three flags hidden in this environment.",
+  "postface": "Excellent work! You found all three flags.\nThis shows why keeping software up-to-date is critical."
 }

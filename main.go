@@ -35,9 +35,10 @@ type Config struct {
 // Challenge represents the metadata for a single challenge (challenge.json).
 type Challenge struct {
     Name     string   `json:"name"`
-    Flag     string   `json:"flag"`
+    Flag     string   `json:"flag"`     // Single flag (backward compatible)
+    Flags    []string `json:"flags"`    // Multiple flags (new)
     Hints    []string `json:"hints"`
-    Ports    []int    `json:"ports"` // Mude para Ports e tipo []int
+    Ports    []int    `json:"ports"`    // Mude para Ports e tipo []int
     Preface  string   `json:"preface"`
     Postface string   `json:"postface"`
 }
@@ -85,81 +86,33 @@ func main() {
 	fmt.Println("#######################################")
 	fmt.Println("## Welcome to the Challenge Platform ##")
 	fmt.Println("#######################################")
-	fmt.Println("\nInitializing...")
-
-	fmt.Println("Docker client connected successfully.")
 
 	// Load the main configuration file.
-	configFile, err := os.ReadFile("challenges/config.json")
+	configFile, err := os.ReadFile("/wss-ctf/challenges/config.json")
 	if err != nil {
-		log.Fatalf("Error: Could not read challenges/config.json. Details: %v", err)
+		log.Fatalf("Error: Could not read /wss-ctf/challenges/config.json. Details: %v", err)
 	}
 
 	var config Config
 	if err := json.Unmarshal(configFile, &config); err != nil {
-		log.Fatalf("Error: Could not parse challenges/config.json. Details: %v", err)
+		log.Fatalf("Error: Could not parse /wss-ctf/challenges/config.json. Details: %v", err)
 	}
 
-	// Main menu loop
-	reader := bufio.NewReader(os.Stdin)
-    currentIndex := -1 // -1means that the user will choose
+	// Start with first challenge directly
+	// Run first challenge (01-first-chal)
+	if len(config.Challenges) > 0 {
+		firstChallenge := config.Challenges[0]
+		result := runChallenge(ctx, cli, firstChallenge, *build, *debug, false)
 
-    for {
-        if currentIndex == -1 {
-            fmt.Println("\n=== CHALLENGE MENU ===")
-            fmt.Println("Pick your challenge:")
+		// After first challenge, check if we should continue to second
+		if result == "continue" && len(config.Challenges) > 1 {
+			// Start second challenge silently
+			secondChallenge := config.Challenges[1]
+			runChallenge(ctx, cli, secondChallenge, *build, *debug, true)
+		}
+	}
 
-            // Display available challenges
-            for i, challengeDir := range config.Challenges {
-                challengePath := filepath.Join("challenges", challengeDir)
-                challengeFile, err := os.ReadFile(filepath.Join(challengePath, "challenge.json"))
-                if err != nil {
-                    fmt.Printf("%d. %s (Error loading metadata)\n", i+1, challengeDir)
-                    continue
-                }
-                var challenge Challenge
-                if err := json.Unmarshal(challengeFile, &challenge); err != nil {
-                    fmt.Printf("%d. %s (Error parsing metadata)\n", i+1, challengeDir)
-                    continue
-                }
-                fmt.Printf("%d. %s\n", i+1, challenge.Name)
-            }
-            fmt.Println("\nType a number to select a challenge, or 'quit' to exit")
-            fmt.Print("Your choice > ")
-
-            input, _ := reader.ReadString('\n')
-            input = strings.TrimSpace(input)
-
-            if strings.EqualFold(input, "quit") || strings.EqualFold(input, "exit") {
-                fmt.Println("\nExiting challenge platform. Goodbye!")
-                return
-            }
-
-            choice, err := strconv.Atoi(input)
-            if err != nil || choice < 1 || choice > len(config.Challenges) {
-                fmt.Println("Invalid choice. Please enter a number between 1 and", len(config.Challenges))
-                continue
-            }
-            currentIndex = choice - 1
-        }
-
-        challengeDir := config.Challenges[currentIndex]
-        result := runChallenge(ctx, cli, challengeDir, *build, *debug)
-        if result == "next" {
-            // Go to the next challenge automatically
-            if currentIndex+1 < len(config.Challenges) {
-                fmt.Println("\nMoving on to the next challenge...")
-                currentIndex++
-                continue
-            } else {
-                fmt.Println("\nYou have completed all the challenges!")
-                currentIndex = -1 // Back to menu
-                continue
-            }
-        }
-        // Back to menu
-        currentIndex = -1
-    }
+	fmt.Println("\nChallenge session ended. Goodbye!")
 }
 
 func fileExists(filename string) bool {
@@ -171,27 +124,25 @@ func fileExists(filename string) bool {
 }
 
 // runChallenge acts as a router, detecting the challenge type and calling the appropriate handler.
-func runChallenge(ctx context.Context, cli *client.Client, dirName string, forceBuild bool, debug bool) string {
-    challengePath := filepath.Join("challenges", dirName)
+func runChallenge(ctx context.Context, cli *client.Client, dirName string, forceBuild bool, debug bool, silent bool) string {
+    challengePath := filepath.Join("/wss-ctf/challenges", dirName)
     composePath := filepath.Join(challengePath, "docker-compose.yml")
     dockerfilePath := filepath.Join(challengePath, "Dockerfile")
 
     if fileExists(composePath) {
         // This is a Docker Compose-based challenge
-        return runComposeChallenge(challengePath, debug)
+        return runComposeChallenge(ctx, cli, challengePath, debug, silent)
     } else if fileExists(dockerfilePath) {
         // This is a Dockerfile-based challenge
-        return runDockerfileChallenge(ctx, cli, dirName, forceBuild, debug)
+        return runDockerfileChallenge(ctx, cli, dirName, forceBuild, debug, silent)
     } else {
         log.Printf("Error: No Dockerfile or docker-compose.yml found for challenge '%s'", dirName)
-        fmt.Println("\nPress Enter to return to the menu...")
-        bufio.NewReader(os.Stdin).ReadString('\n')
         return "menu"
     }
 }
 
 // runComposeChallenge handles challenges defined by a docker-compose.yml file.
-func runComposeChallenge(challengePath string, debug bool) string {
+func runComposeChallenge(ctx context.Context, cli *client.Client, challengePath string, debug bool, silent bool) string {
     // Load challenge metadata, which is common for all challenge types
     challengeFile, err := os.ReadFile(filepath.Join(challengePath, "challenge.json"))
     if err != nil {
@@ -204,14 +155,16 @@ func runComposeChallenge(challengePath string, debug bool) string {
         return "menu"
     }
 
-    fmt.Printf("\n--- Starting Challenge: %s ---\n", challenge.Name)
-    fmt.Println("Detected docker-compose.yml, starting environment...")
+    if !silent {
+        fmt.Printf("\n--- Starting Challenge: %s ---\n", challenge.Name)
+        fmt.Println("Detected docker-compose.yml, starting environment...")
+    }
 
     // --- Docker Compose Logic ---
     // We execute docker-compose as an external command
     cmdUp := exec.Command("docker", "compose", "up", "-d")
     cmdUp.Dir = challengePath // Run the command in the challenge's directory
-    if debug {
+    if debug && !silent {
         cmdUp.Stdout = os.Stdout
         cmdUp.Stderr = os.Stderr
     }
@@ -225,53 +178,46 @@ func runComposeChallenge(challengePath string, debug bool) string {
     }
     // --- End Docker Compose Logic ---
 
-    fmt.Printf("\n✅ Challenge '%s' is now running!\n", challenge.Name)
-    fmt.Println("   You can interact with it at:")
-    for _, port := range challenge.Ports {
-        // Adiciona uma descrição simples para as portas conhecidas
-        if port == 9001 {
-            fmt.Printf("   - Web Console: http://127.0.0.1:%d\n", port)
-        } else if port == 9000 {
-            fmt.Printf("   - API Endpoint: http://127.0.0.1:%d\n", port)
-        } else {
-            fmt.Printf("   - http://127.0.0.1:%d\n", port)
+    if !silent {
+        fmt.Printf("\n✅ Challenge '%s' is now running!\n", challenge.Name)
+        fmt.Println("   You can interact with it at:")
+        for _, port := range challenge.Ports {
+            // Adiciona uma descrição simples para as portas conhecidas
+            if port == 9001 {
+                fmt.Printf("   - Web Console: http://127.0.0.1:%d\n", port)
+            } else if port == 9000 {
+                fmt.Printf("   - API Endpoint: http://127.0.0.1:%d\n", port)
+            } else {
+                fmt.Printf("   - http://127.0.0.1:%d\n", port)
+            }
+        }
+        fmt.Println()
+
+        if challenge.Preface != "" {
+            fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            fmt.Println(challenge.Preface)
+            fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         }
     }
-    fmt.Println()
 
-    if challenge.Preface != "" {
-        fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        fmt.Println(challenge.Preface)
-        fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    }
-
-    // The user interaction loop is the same for both types of challenges
+    // The user interaction loop
     reader := bufio.NewReader(os.Stdin)
     hintIndex := 0
     var finalResult string
-    
+
+    // Multi-flag support
+    foundFlags := make(map[string]bool)
+    hasMultipleFlags := len(challenge.Flags) > 0
+    totalFlags := len(challenge.Flags)
+
     interactionLoop:
     for {
         fmt.Print("Enter flag > ")
         input, _ := reader.ReadString('\n')
         input = strings.TrimSpace(input)
 
+        // Check for special commands first
         switch strings.ToLower(input) {
-        case strings.ToLower(challenge.Flag):
-            fmt.Println("\n✅ Correct! Well done.")
-            if challenge.Postface != "" {
-                fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-                fmt.Println(challenge.Postface)
-                fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-            }
-            fmt.Println("\nType 'next' to go straight to the next challenge, or press Enter to return to the menu...")
-            inputNext, _ := reader.ReadString('\n')
-            if strings.EqualFold(strings.TrimSpace(inputNext), "next") {
-                finalResult = "next"
-            } else {
-                finalResult = "menu"
-            }
-            break interactionLoop
         case "hint":
              if len(challenge.Hints) == 0 {
                 fmt.Println("No hints available for this challenge.")
@@ -281,11 +227,62 @@ func runComposeChallenge(challengePath string, debug bool) string {
             } else {
                 fmt.Println("No more hints available.")
             }
-        case "menu":
-            finalResult = "menu"
+            continue
+        case "quit", "exit":
+            finalResult = "quit"
             break interactionLoop
-        default:
-            fmt.Println("Incorrect flag. Try again. (Type 'hint' for a hint or 'menu' to return to menu)")
+        }
+
+        // Flag validation
+        if hasMultipleFlags {
+            // Multi-flag mode
+            flagFound := false
+            for _, validFlag := range challenge.Flags {
+                if strings.EqualFold(input, validFlag) {
+                    if foundFlags[validFlag] {
+                        fmt.Println("Flag already found")
+                    } else {
+                        foundFlags[validFlag] = true
+                        fmt.Println("\n✅ Correct! Flag found.")
+
+                        // Check if all flags found
+                        if len(foundFlags) == totalFlags {
+                            if challenge.Postface != "" {
+                                fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                                fmt.Println(challenge.Postface)
+                                fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                            }
+                            finalResult = "complete"
+                            break interactionLoop
+                        }
+                    }
+                    flagFound = true
+                    break
+                }
+            }
+            if !flagFound {
+                fmt.Println("Incorrect flag. Try again. (Type 'hint' for a hint, or 'quit' to exit)")
+            }
+        } else {
+            // Single flag mode (backward compatible)
+            if strings.EqualFold(input, challenge.Flag) {
+                fmt.Println("\n✅ Correct! Well done.")
+                if challenge.Postface != "" {
+                    fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                    fmt.Println(challenge.Postface)
+                    fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                }
+                fmt.Println("\nType 'next' to go straight to the next challenge, or press Enter to return to the menu...")
+                inputNext, _ := reader.ReadString('\n')
+                if strings.EqualFold(strings.TrimSpace(inputNext), "next") {
+                    finalResult = "next"
+                } else {
+                    finalResult = "menu"
+                }
+                break interactionLoop
+            } else {
+                fmt.Println("Incorrect flag. Try again. (Type 'hint' for a hint, or 'quit' to exit)")
+            }
         }
     }
 
@@ -301,9 +298,9 @@ func runComposeChallenge(challengePath string, debug bool) string {
 }
 
 // runDockerfileChallenge handles challenges defined by a Dockerfile.
-func runDockerfileChallenge(ctx context.Context, cli *client.Client, dirName string, forceBuild bool, debug bool) string {
+func runDockerfileChallenge(ctx context.Context, cli *client.Client, dirName string, forceBuild bool, debug bool, silent bool) string {
     // This function contains the exact same logic as your original runChallenge function
-    challengePath := filepath.Join("challenges", dirName)
+    challengePath := filepath.Join("/wss-ctf/challenges", dirName)
     challengeFile, err := os.ReadFile(filepath.Join(challengePath, "challenge.json"))
     if err != nil {
         log.Printf("Error: Could not read challenge.json in %s. Skipping. Details: %v", challengePath, err)
@@ -314,7 +311,11 @@ func runDockerfileChallenge(ctx context.Context, cli *client.Client, dirName str
         log.Printf("Error: Could not parse challenge.json in %s. Skipping. Details: %v", challengePath, err)
         return "menu"
     }
-    fmt.Printf("\n--- Starting Challenge: %s ---\n", challenge.Name)
+
+    if !silent {
+        fmt.Printf("\n--- Starting Challenge: %s ---\n", challenge.Name)
+    }
+
     imageTag := "challenge-" + strings.ToLower(dirName) + ":latest"
     containerName := "challenge-container-" + strings.ToLower(dirName)
     cleanup(ctx, cli, containerName, "", false, debug)
@@ -323,72 +324,69 @@ func runDockerfileChallenge(ctx context.Context, cli *client.Client, dirName str
         log.Printf("Warning: Could not check if image '%s' exists: %v. Attempting to build.", imageTag, err)
     }
     if forceBuild || !exists {
-        if forceBuild && debug {
+        if forceBuild && debug && !silent {
             fmt.Print("Build forced by user with --build flag")
         }
-        err = buildImage(ctx, cli, challengePath, imageTag, debug)
+        err = buildImage(ctx, cli, challengePath, imageTag, debug && !silent)
         if err != nil {
             log.Printf("Error: Failed to build Docker image for challenge %s. Details: %v", dirName, err)
             return "fail"
         }
     } else {
-        if debug {
+        if debug && !silent {
             fmt.Printf("Using existing image '%s'. Use --build to force a rebuild.\n", imageTag)
         }
     }
     if len(challenge.Ports) == 0 {
     log.Printf("Error: No ports defined in challenge.json for '%s'", challenge.Name)
-    return "fail" 
+    return "fail"
     }
-    _, err = runContainer(ctx, cli, imageTag, containerName, challenge.Ports[0], debug)
+    _, err = runContainer(ctx, cli, imageTag, containerName, challenge.Ports[0], debug && !silent)
     if err != nil {
         log.Printf("Error: Failed to run Docker container for challenge %s. Details: %v", dirName, err)
         cleanup(ctx, cli, containerName, imageTag, true, debug)
         return "fail"
     }
-    fmt.Printf("\n✅ Challenge '%s' is now running!\n", challenge.Name)
-    fmt.Println("   You can interact with it at:")
-    for _, port := range challenge.Ports {
-        // Adiciona uma descrição simples para as portas conhecidas
-        if port == 9001 {
-            fmt.Printf("   - Web Console: http://127.0.0.1:%d\n", port)
-        } else if port == 9000 {
-            fmt.Printf("   - API Endpoint: http://127.0.0.1:%d\n", port)
-        } else {
-            fmt.Printf("   - http://127.0.0.1:%d\n", port)
+
+    if !silent {
+        fmt.Printf("\n✅ Challenge '%s' is now running!\n", challenge.Name)
+        fmt.Println("   You can interact with it at:")
+        for _, port := range challenge.Ports {
+            // Adiciona uma descrição simples para as portas conhecidas
+            if port == 9001 {
+                fmt.Printf("   - Web Console: http://127.0.0.1:%d\n", port)
+            } else if port == 9000 {
+                fmt.Printf("   - API Endpoint: http://127.0.0.1:%d\n", port)
+            } else {
+                fmt.Printf("   - http://127.0.0.1:%d\n", port)
+            }
         }
-    }    
-    if challenge.Preface != "" {
-        fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        fmt.Println(challenge.Preface)
-        fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        if challenge.Preface != "" {
+            fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            fmt.Println(challenge.Preface)
+            fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        }
     }
     reader := bufio.NewReader(os.Stdin)
     hintIndex := 0
     var finalResult string
-    
+
+    // Check if this is the first challenge (01-first-chal)
+    isFirstChallenge := strings.Contains(dirName, "01-first-chal")
+
+    // Multi-flag support
+    foundFlags := make(map[string]bool)
+    hasMultipleFlags := len(challenge.Flags) > 0
+    totalFlags := len(challenge.Flags)
+
     interactionLoop:
     for {
         fmt.Print("Enter flag > ")
         input, _ := reader.ReadString('\n')
         input = strings.TrimSpace(input)
 
+        // Check for special commands first
         switch strings.ToLower(input) {
-        case strings.ToLower(challenge.Flag):
-            fmt.Println("\n✅ Correct! Well done.")
-            if challenge.Postface != "" {
-                fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-                fmt.Println(challenge.Postface)
-                fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-            }
-            fmt.Println("\nType 'next' to go straight to the next challenge, or press Enter to return to the menu...")
-            inputNext, _ := reader.ReadString('\n')
-            if strings.EqualFold(strings.TrimSpace(inputNext), "next") {
-                finalResult = "next"
-            } else {
-                finalResult = "menu"
-            }
-            break interactionLoop
         case "hint":
             if len(challenge.Hints) == 0 {
                 fmt.Println("No hints available for this challenge.")
@@ -398,16 +396,78 @@ func runDockerfileChallenge(ctx context.Context, cli *client.Client, dirName str
             } else {
                 fmt.Println("No more hints available.")
             }
-        case "menu":
-            finalResult = "menu"
+            continue
+        case "quit", "exit":
+            finalResult = "quit"
             break interactionLoop
-        default:
-            fmt.Println("Incorrect flag. Try again. (Type 'hint' for a hint or 'menu' to return to menu)")
+        }
+
+        // Flag validation
+        if hasMultipleFlags {
+            // Multi-flag mode
+            flagFound := false
+            for _, validFlag := range challenge.Flags {
+                if strings.EqualFold(input, validFlag) {
+                    if foundFlags[validFlag] {
+                        fmt.Println("Flag already found")
+                    } else {
+                        foundFlags[validFlag] = true
+                        fmt.Println("\n✅ Correct! Flag found.")
+
+                        // Check if all flags found
+                        if len(foundFlags) == totalFlags {
+                            if challenge.Postface != "" {
+                                fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                                fmt.Println(challenge.Postface)
+                                fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                            }
+                            finalResult = "complete"
+                            break interactionLoop
+                        }
+                    }
+                    flagFound = true
+                    break
+                }
+            }
+            if !flagFound {
+                fmt.Println("Incorrect flag. Try again. (Type 'hint' for a hint, or 'quit' to exit)")
+            }
+        } else {
+            // Single flag mode (backward compatible)
+            if strings.EqualFold(input, challenge.Flag) {
+                fmt.Println("\n✅ Correct! Well done.")
+                if challenge.Postface != "" {
+                    fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                    fmt.Println(challenge.Postface)
+                    fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                }
+
+                if isFirstChallenge {
+                    // For first challenge, don't break - return "continue" to keep it running
+                    finalResult = "continue"
+                    break interactionLoop
+                } else {
+                    // For other challenges, ask if they want to continue
+                    fmt.Println("\nType 'next' to go straight to the next challenge, or press Enter to return to the menu...")
+                    inputNext, _ := reader.ReadString('\n')
+                    if strings.EqualFold(strings.TrimSpace(inputNext), "next") {
+                        finalResult = "next"
+                    } else {
+                        finalResult = "menu"
+                    }
+                    break interactionLoop
+                }
+            } else {
+                fmt.Println("Incorrect flag. Try again. (Type 'hint' for a hint, or 'quit' to exit)")
+            }
         }
     }
-    
-    fmt.Println("\nShutting down the current challenge...")
-    cleanup(ctx, cli, containerName, imageTag, false, debug)
+
+    // Don't cleanup first challenge if returning "continue"
+    if !(isFirstChallenge && finalResult == "continue") {
+        fmt.Println("\nShutting down the current challenge...")
+        cleanup(ctx, cli, containerName, imageTag, false, debug)
+    }
     return finalResult
 }
 
@@ -558,15 +618,15 @@ func cleanup(ctx context.Context, cli *client.Client, containerName, imageName s
 // cleanAll removes all challenge containers and images
 func cleanAll(ctx context.Context, cli *client.Client) {
 	// Load the configuration to get all challenge directories
-	configFile, err := os.ReadFile("challenges/config.json")
+	configFile, err := os.ReadFile("/wss-ctf/challenges/config.json")
 	if err != nil {
-		log.Printf("Warning: Could not read challenges/config.json: %v", err)
+		log.Printf("Warning: Could not read /wss-ctf/challenges/config.json: %v", err)
 		return
 	}
 
 	var config Config
 	if err := json.Unmarshal(configFile, &config); err != nil {
-		log.Printf("Warning: Could not parse challenges/config.json: %v", err)
+		log.Printf("Warning: Could not parse /wss-ctf/challenges/config.json: %v", err)
 		return
 	}
 
