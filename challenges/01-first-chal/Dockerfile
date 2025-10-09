@@ -3,8 +3,9 @@ FROM python:3.13-slim
 WORKDIR /app
 
 COPY server.py .
+COPY relatorio-de-teste-de-seguranca-WSS.pdf /relatorio-de-teste-de-seguranca-WSS.pdf
 
-RUN echo 'WSS{flag88214B93CB66C6AA015B8486E3E65CBA}' > /flag
+RUN echo 'WSS{flag_voce_esta_no_caminho_certo!}' > /flag
 
 RUN pip install flask
 

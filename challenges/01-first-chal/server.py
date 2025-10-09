@@ -32,17 +32,21 @@ def challenge():
 def download():
     filename = flask.request.args.get("file", "")
 
-    if filename != "report.pdf":
+    if filename != "relatorio-de-teste-de-segurança-WSS.pdf":
         return "No access to download this file", 403
 
-    # Create the report.pdf content
-    content = "hello world"
+    # Serve the actual PDF file from root directory
+    pdf_path = "/relatorio-de-teste-de-segurança-WSS.pdf"
 
-    response = flask.Response(content)
-    response.headers['Content-Disposition'] = 'attachment; filename=report.pdf'
-    response.headers['Content-Type'] = 'text/plain'
-
-    return response
+    try:
+        return flask.send_file(
+            pdf_path,
+            as_attachment=True,
+            download_name="relatorio-de-teste-de-segurança-WSS.pdf",
+            mimetype="application/pdf"
+        )
+    except FileNotFoundError:
+        return "File not found", 404
 
 app.secret_key = os.urandom(8)
 app.run(host="0.0.0.0", port=80)

@@ -1,16 +1,16 @@
 {
   "name": "Minio - Leaky Buckets",
   "flags": [
-    "flag_from_report_pdf",
-    "flag_from_minio_image",
-    "flag_from_second_vuln"
+    "WSS{pilot_report}",
+    "WSS{voce-achou-a-flag-completa}",
+    "WSS{202cb962ac59075b964b07152d234b70-root}"
   ],
   "hints": [
-    "The vulnerability is in a specific version of a popular object storage service. What's the CVE?",
-    "The vulnerability is related to the bootstrap process and discloses sensitive information from environment variables.",
-    "A Proof of Concept for CVE-2023-28432 can be found online. It involves a POST request to a specific API endpoint."
+    "A vulnerabilidade está em uma versão específica de um serviço popular de armazenamento de objetos. Qual é o CVE?",
+    "A vulnerabilidade está relacionada ao processo de bootstrap e divulga informações sensíveis de variáveis de ambiente.",
+    "Um Proof of Concept para CVE-2023-28432 pode ser encontrado online. Envolve uma requisição POST para um endpoint específico da API."
   ],
   "ports": [9000, 9001],
-  "preface": "We've set up an instance of the Minio object storage service for you.\nIt seems to be an older version, but the sysadmin swears it's secure.\nYour mission is to find three flags hidden in this environment.",
-  "postface": "Excellent work! You found all three flags.\nThis shows why keeping software up-to-date is critical."
+  "preface": "Configuramos uma instância do serviço de armazenamento de objetos Minio para você.\nParece ser uma versão mais antiga, mas o sysadmin jura que é segura.\nSua missão é encontrar três flags escondidas neste ambiente.",
+  "postface": "Excelente trabalho! Você encontrou todas as três flags.\nIsso mostra por que manter o software atualizado é crítico."
 }

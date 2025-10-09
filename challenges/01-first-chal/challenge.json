@@ -1,12 +1,12 @@
 {
   "name": "The First Step",
-  "flag": "WSS{flag88214B93CB66C6AA015B8486E3E65CBA}",
+  "flag": "WSS{flag_voce_esta_no_caminho_certo!}",
   "hints": [
-    "Sometimes the most obvious answer is the right one.",
-    "Have you tried looking around the page?",
-    "Check the page source or inspect element."
+    "As vezes um campo de input pode trazer consequências indesejadas.",
+    "Você já tentou usar um ';' após um comando?",
+    "O comando 'cat' permite que você leia arquivos."
   ],
   "ports": [8080],
-  "preface": "Welcome to your first challenge!\nThis is a simple warm-up to get you familiar with the platform.\nRemember: flags often hide in plain sight.",
-  "postface": "Great job! You've found the first flag.\nBefore moving forward, make sure to download the important report at /download?file=report.pdf\nThe challenge container is still running for you to access it."
+  "preface": "Bem-vindo ao primeiro desafio!\nEste é um aquecimento simples para você se familiarizar com a plataforma.\nLembre-se: as flags geralmente se esconde à vista de todos.",
+  "postface": "Ótimo trabalho! Você encontrou a primeira flag.\nAntes de prosseguir, certifique-se de baixar o relatório importante em /download?file=relatorio-de-teste-de-segurança-WSS.pdf\nO container do desafio ainda está rodando para você acessá-lo."
 }

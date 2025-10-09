@@ -58,7 +58,7 @@ func main() {
 	// Launch goroutine to handle interrupt signals
 	go func() {
 		for range sigChan {
-			fmt.Println("\n⚠️  Ctrl+C disabled. Please type 'quit' or 'exit' to shut down properly.")
+			fmt.Println("\n⚠️  Ctrl+C desabilitado. Por favor, digite 'quit' ou 'exit' para encerrar corretamente.")
 		}
 	}()
 
@@ -77,15 +77,15 @@ func main() {
 
 	// Handle --clean flag
 	if *clean {
-		fmt.Println("Cleaning up all challenge images and containers...")
+		fmt.Println("Limpando todas as imagens e containers dos desafios...")
 		cleanAll(ctx, cli)
-		fmt.Println("All challenge resources have been removed.")
+		fmt.Println("Todos os recursos dos desafios foram removidos.")
 		return
 	}
 
-	fmt.Println("#######################################")
-	fmt.Println("## Welcome to the Challenge Platform ##")
-	fmt.Println("#######################################")
+	fmt.Println("###########################################")
+	fmt.Println("## Bem-vindo à Plataforma de Desafios WSS ##")
+	fmt.Println("###########################################")
 
 	// Load the main configuration file.
 	configFile, err := os.ReadFile("/wss-ctf/challenges/config.json")
@@ -112,7 +112,7 @@ func main() {
 		}
 	}
 
-	fmt.Println("\nChallenge session ended. Goodbye!")
+	fmt.Println("\nSessão de desafios encerrada. Até logo!")
 }
 
 func fileExists(filename string) bool {
@@ -156,22 +156,26 @@ func runComposeChallenge(ctx context.Context, cli *client.Client, challengePath 
     }
 
     if !silent {
-        fmt.Printf("\n--- Starting Challenge: %s ---\n", challenge.Name)
-        fmt.Println("Detected docker-compose.yml, starting environment...")
+        fmt.Printf("\n--- Iniciando Desafio: %s ---\n", challenge.Name)
+        fmt.Println("docker-compose.yml detectado, iniciando ambiente...")
     }
 
     // --- Docker Compose Logic ---
     // We execute docker-compose as an external command
     cmdUp := exec.Command("docker", "compose", "up", "-d")
     cmdUp.Dir = challengePath // Run the command in the challenge's directory
+
+    // Capture stderr to show errors even in silent mode
+    var stderr bytes.Buffer
+    cmdUp.Stderr = &stderr
+
     if debug && !silent {
         cmdUp.Stdout = os.Stdout
-        cmdUp.Stderr = os.Stderr
     }
     if err := cmdUp.Run(); err != nil {
-        log.Printf("Error starting docker-compose for challenge '%s': %v", challenge.Name, err)
+        log.Printf("Error starting docker-compose for challenge '%s': %v\nOutput: %s", challenge.Name, err, stderr.String())
         // Attempt to clean up even if startup failed
-        cmdDown := exec.Command("docker", "compose", "down")
+        cmdDown := exec.Command("docker", "compose", "down", "-v")
         cmdDown.Dir = challengePath
         cmdDown.Run()
         return "menu"
@@ -179,12 +183,12 @@ func runComposeChallenge(ctx context.Context, cli *client.Client, challengePath 
     // --- End Docker Compose Logic ---
 
     if !silent {
-        fmt.Printf("\n✅ Challenge '%s' is now running!\n", challenge.Name)
-        fmt.Println("   You can interact with it at:")
+        fmt.Printf("\n✅ Desafio '%s' está rodando!\n", challenge.Name)
+        fmt.Println("   Você pode interagir com ele em:")
         for _, port := range challenge.Ports {
             // Adiciona uma descrição simples para as portas conhecidas
             if port == 9001 {
-                fmt.Printf("   - Web Console: http://127.0.0.1:%d\n", port)
+                fmt.Printf("   - Console Web: http://127.0.0.1:%d\n", port)
             } else if port == 9000 {
                 fmt.Printf("   - API Endpoint: http://127.0.0.1:%d\n", port)
             } else {
@@ -212,7 +216,7 @@ func runComposeChallenge(ctx context.Context, cli *client.Client, challengePath 
 
     interactionLoop:
     for {
-        fmt.Print("Enter flag > ")
+        fmt.Print("Digite a flag > ")
         input, _ := reader.ReadString('\n')
         input = strings.TrimSpace(input)
 
@@ -220,12 +224,12 @@ func runComposeChallenge(ctx context.Context, cli *client.Client, challengePath 
         switch strings.ToLower(input) {
         case "hint":
              if len(challenge.Hints) == 0 {
-                fmt.Println("No hints available for this challenge.")
+                fmt.Println("Nenhuma dica disponível para este desafio.")
             } else if hintIndex < len(challenge.Hints) {
-                fmt.Printf("Hint %d/%d: %s\n", hintIndex+1, len(challenge.Hints), challenge.Hints[hintIndex])
+                fmt.Printf("Dica %d/%d: %s\n", hintIndex+1, len(challenge.Hints), challenge.Hints[hintIndex])
                 hintIndex++
             } else {
-                fmt.Println("No more hints available.")
+                fmt.Println("Não há mais dicas disponíveis.")
             }
             continue
         case "quit", "exit":
@@ -240,10 +244,10 @@ func runComposeChallenge(ctx context.Context, cli *client.Client, challengePath 
             for _, validFlag := range challenge.Flags {
                 if strings.EqualFold(input, validFlag) {
                     if foundFlags[validFlag] {
-                        fmt.Println("Flag already found")
+                        fmt.Println("Flag já encontrada")
                     } else {
                         foundFlags[validFlag] = true
-                        fmt.Println("\n✅ Correct! Flag found.")
+                        fmt.Println("\n✅ Correto! Flag encontrada.")
 
                         // Check if all flags found
                         if len(foundFlags) == totalFlags {
@@ -261,18 +265,18 @@ func runComposeChallenge(ctx context.Context, cli *client.Client, challengePath 
                 }
             }
             if !flagFound {
-                fmt.Println("Incorrect flag. Try again. (Type 'hint' for a hint, or 'quit' to exit)")
+                fmt.Println("Flag incorreta. Tente novamente. (Digite 'hint' para uma dica, ou 'quit' para sair)")
             }
         } else {
             // Single flag mode (backward compatible)
             if strings.EqualFold(input, challenge.Flag) {
-                fmt.Println("\n✅ Correct! Well done.")
+                fmt.Println("\n✅ Correto! Muito bem.")
                 if challenge.Postface != "" {
                     fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
                     fmt.Println(challenge.Postface)
                     fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
                 }
-                fmt.Println("\nType 'next' to go straight to the next challenge, or press Enter to return to the menu...")
+                fmt.Println("\nDigite 'next' para ir direto ao próximo desafio, ou pressione Enter para voltar ao menu...")
                 inputNext, _ := reader.ReadString('\n')
                 if strings.EqualFold(strings.TrimSpace(inputNext), "next") {
                     finalResult = "next"
@@ -281,14 +285,14 @@ func runComposeChallenge(ctx context.Context, cli *client.Client, challengePath 
                 }
                 break interactionLoop
             } else {
-                fmt.Println("Incorrect flag. Try again. (Type 'hint' for a hint, or 'quit' to exit)")
+                fmt.Println("Flag incorreta. Tente novamente. (Digite 'hint' para uma dica, ou 'quit' para sair)")
             }
         }
     }
 
     // Cleanup for Docker Compose
-    fmt.Println("\nShutting down the current challenge environment...")
-    cmdDown := exec.Command("docker", "compose", "down")
+    fmt.Println("\nEncerrando o ambiente do desafio atual...")
+    cmdDown := exec.Command("docker", "compose", "down", "-v")
     cmdDown.Dir = challengePath
     if err := cmdDown.Run(); err != nil {
         log.Printf("Warning: could not run 'docker compose down': %v", err)
@@ -313,7 +317,7 @@ func runDockerfileChallenge(ctx context.Context, cli *client.Client, dirName str
     }
 
     if !silent {
-        fmt.Printf("\n--- Starting Challenge: %s ---\n", challenge.Name)
+        fmt.Printf("\n--- Iniciando Desafio: %s ---\n", challenge.Name)
     }
 
     imageTag := "challenge-" + strings.ToLower(dirName) + ":latest"
@@ -349,12 +353,12 @@ func runDockerfileChallenge(ctx context.Context, cli *client.Client, dirName str
     }
 
     if !silent {
-        fmt.Printf("\n✅ Challenge '%s' is now running!\n", challenge.Name)
-        fmt.Println("   You can interact with it at:")
+        fmt.Printf("\n✅ Desafio '%s' está rodando!\n", challenge.Name)
+        fmt.Println("   Você pode interagir com ele em:")
         for _, port := range challenge.Ports {
             // Adiciona uma descrição simples para as portas conhecidas
             if port == 9001 {
-                fmt.Printf("   - Web Console: http://127.0.0.1:%d\n", port)
+                fmt.Printf("   - Console Web: http://127.0.0.1:%d\n", port)
             } else if port == 9000 {
                 fmt.Printf("   - API Endpoint: http://127.0.0.1:%d\n", port)
             } else {
@@ -381,7 +385,7 @@ func runDockerfileChallenge(ctx context.Context, cli *client.Client, dirName str
 
     interactionLoop:
     for {
-        fmt.Print("Enter flag > ")
+        fmt.Print("Digite a flag > ")
         input, _ := reader.ReadString('\n')
         input = strings.TrimSpace(input)
 
@@ -389,12 +393,12 @@ func runDockerfileChallenge(ctx context.Context, cli *client.Client, dirName str
         switch strings.ToLower(input) {
         case "hint":
             if len(challenge.Hints) == 0 {
-                fmt.Println("No hints available for this challenge.")
+                fmt.Println("Nenhuma dica disponível para este desafio.")
             } else if hintIndex < len(challenge.Hints) {
-                fmt.Printf("Hint %d/%d: %s\n", hintIndex+1, len(challenge.Hints), challenge.Hints[hintIndex])
+                fmt.Printf("Dica %d/%d: %s\n", hintIndex+1, len(challenge.Hints), challenge.Hints[hintIndex])
                 hintIndex++
             } else {
-                fmt.Println("No more hints available.")
+                fmt.Println("Não há mais dicas disponíveis.")
             }
             continue
         case "quit", "exit":
@@ -409,10 +413,10 @@ func runDockerfileChallenge(ctx context.Context, cli *client.Client, dirName str
             for _, validFlag := range challenge.Flags {
                 if strings.EqualFold(input, validFlag) {
                     if foundFlags[validFlag] {
-                        fmt.Println("Flag already found")
+                        fmt.Println("Flag já encontrada")
                     } else {
                         foundFlags[validFlag] = true
-                        fmt.Println("\n✅ Correct! Flag found.")
+                        fmt.Println("\n✅ Correto! Flag encontrada.")
 
                         // Check if all flags found
                         if len(foundFlags) == totalFlags {
@@ -430,12 +434,12 @@ func runDockerfileChallenge(ctx context.Context, cli *client.Client, dirName str
                 }
             }
             if !flagFound {
-                fmt.Println("Incorrect flag. Try again. (Type 'hint' for a hint, or 'quit' to exit)")
+                fmt.Println("Flag incorreta. Tente novamente. (Digite 'hint' para uma dica, ou 'quit' para sair)")
             }
         } else {
             // Single flag mode (backward compatible)
             if strings.EqualFold(input, challenge.Flag) {
-                fmt.Println("\n✅ Correct! Well done.")
+                fmt.Println("\n✅ Correto! Muito bem.")
                 if challenge.Postface != "" {
                     fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
                     fmt.Println(challenge.Postface)
@@ -448,7 +452,7 @@ func runDockerfileChallenge(ctx context.Context, cli *client.Client, dirName str
                     break interactionLoop
                 } else {
                     // For other challenges, ask if they want to continue
-                    fmt.Println("\nType 'next' to go straight to the next challenge, or press Enter to return to the menu...")
+                    fmt.Println("\nDigite 'next' para ir direto ao próximo desafio, ou pressione Enter para voltar ao menu...")
                     inputNext, _ := reader.ReadString('\n')
                     if strings.EqualFold(strings.TrimSpace(inputNext), "next") {
                         finalResult = "next"
@@ -458,14 +462,14 @@ func runDockerfileChallenge(ctx context.Context, cli *client.Client, dirName str
                     break interactionLoop
                 }
             } else {
-                fmt.Println("Incorrect flag. Try again. (Type 'hint' for a hint, or 'quit' to exit)")
+                fmt.Println("Flag incorreta. Tente novamente. (Digite 'hint' para uma dica, ou 'quit' para sair)")
             }
         }
     }
 
     // Don't cleanup first challenge if returning "continue"
     if !(isFirstChallenge && finalResult == "continue") {
-        fmt.Println("\nShutting down the current challenge...")
+        fmt.Println("\nEncerrando o desafio atual...")
         cleanup(ctx, cli, containerName, imageTag, false, debug)
     }
     return finalResult
