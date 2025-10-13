@@ -271,7 +271,7 @@ def download():
     filename = flask.request.args.get("file", "")
 
     if filename != "relatorio-de-teste-WSS.pdf":
-        return "No access to download this file", 403
+        return f"Acesso negado ao arquivo '{filename}'. Tente com um parâmetro 'file' diferente.", 403
 
     # Serve the actual PDF file from root directory
     pdf_path = "/relatorio-de-teste-WSS.pdf"
