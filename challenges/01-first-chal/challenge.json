@@ -7,6 +7,6 @@
     "O comando 'cat' permite que você leia arquivos."
   ],
   "ports": [8080],
-  "preface": "Bem-vindo ao primeiro desafio!\nEste é um aquecimento simples para você se familiarizar com a plataforma.\nLembre-se: as flags geralmente se esconde à vista de todos.",
-  "postface": "Ótimo trabalho! Você encontrou a primeira flag.\nAntes de prosseguir, certifique-se de baixar o relatório importante em /download?file=relatorio-de-teste-de-segurança-WSS.pdf\nO container do desafio ainda está rodando para você acessá-lo."
+  "preface": "Bem-vindo ao primeiro desafio!\nEste é um aquecimento simples para você se familiarizar com a plataforma.\nLembre-se: as flags geralmente se esconde à vista de todos.\n\nDica: Se algo der errado, você pode sair digitando 'quit' e reiniciar a plataforma digitando 'challenge' no terminal.",
+  "postface": "Ótimo trabalho! Você encontrou a primeira flag.\nAntes de prosseguir, certifique-se de baixar o relatório importante.\nO serviço ainda está rodando! Tente usar o feroxbuster no terminal digitando /home/wssctf/feroxbuster para descobrir rotas escondidas: https://epi052.github.io/feroxbuster-docs/docs/overview/"
 }

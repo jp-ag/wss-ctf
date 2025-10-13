@@ -6,6 +6,7 @@
     "WSS{202cb962ac59075b964b07152d234b70-root}"
   ],
   "hints": [
+    "Você tem uma wordlist útil em /home/wssctf/dirlist que pode ajudar na enumeração.",
     "A vulnerabilidade está em uma versão específica de um serviço popular de armazenamento de objetos. Qual é o CVE?",
     "A vulnerabilidade está relacionada ao processo de bootstrap e divulga informações sensíveis de variáveis de ambiente.",
     "Um Proof of Concept para CVE-2023-28432 pode ser encontrado online. Envolve uma requisição POST para um endpoint específico da API."

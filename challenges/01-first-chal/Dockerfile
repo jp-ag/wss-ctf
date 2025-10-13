@@ -3,7 +3,7 @@ FROM python:3.13-slim
 WORKDIR /app
 
 COPY server.py .
-COPY relatorio-de-teste-de-seguranca-WSS.pdf /relatorio-de-teste-de-seguranca-WSS.pdf
+COPY relatorio-de-teste-WSS.pdf /relatorio-de-teste-WSS.pdf
 
 RUN echo 'WSS{flag_voce_esta_no_caminho_certo!}' > /flag
 
