@@ -7,8 +7,12 @@
   ],
   "hints": [
     "Você tem uma wordlist útil em /home/wssctf/dirlist que pode ajudar na enumeração.",
+    "O endpoint que você encontrou parece pedir um parâmetro `file` com o nome de um arquivo. Você pode ler mais sobre isso aqui https://www.w3schools.com/tags/ref_httpmethods.asp",
+    "Será que tem algum arquivo suspeito em /?",
     "A vulnerabilidade está em uma versão específica de um serviço popular de armazenamento de objetos. Qual é o CVE?",
     "A vulnerabilidade está relacionada ao processo de bootstrap e divulga informações sensíveis de variáveis de ambiente.",
+    "Uma tradicional ferramenta de análise forense para imagens suspeitas se chama `exiftool`. Você nota algum campo suspeito nos metadados da imagem?",
+    "Você já ouviu falar em um método de codificação que transforma dados binários em texto chamado Base64? Existem diversos sites que permitem decodificar Base64. Procure por um deles.",
     "Um Proof of Concept para CVE-2023-28432 pode ser encontrado online. Envolve uma requisição POST para um endpoint específico da API."
   ],
   "ports": [9000, 9001],
