@@ -1,8 +1,8 @@
 {
   "name": "Minio - Leaky Buckets",
   "flags": [
-    "WSS{pilot_report}",
-    "WSS{voce-achou-a-flag-completa}",
+    "WSS{pilot_report_found}",
+    "WSS{voce-achou-a-flag-inteira}",
     "WSS{202cb962ac59075b964b07152d234b70-root}"
   ],
   "hints": [
